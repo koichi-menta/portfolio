@@ -31,7 +31,7 @@ const StyledComponent = styled(Component)`
   cursor: pointer;
   > .background {
     animation-name: animation-sample;
-    animation-duration: 1s;
+    animation-duration: 2s;
     animation-direction: normal;
     animation-iteration-count: infinite;
     animation-timing-function: linear;
