@@ -9,4 +9,12 @@ module.exports = {
   core: {
     builder: "@storybook/builder-webpack5",
   },
+  previewHead: (head) => `
+    ${head}
+    <style>
+      html, body, #root {
+        height: 100%;
+      }
+    </style>
+  `,
 };
