@@ -32,54 +32,66 @@ const StyledComponent = styled(Component)`
   display: inline-block;
   position: relative;
   > .circle {
-    width: 300px;
-    height: 300px;
+    width: 500px;
+    height: 500px;
     border-radius: 50%;
-    border: 1px solid;
+    /* border: 1px solid; */
     position: absolute;
     top: 50%;
     left: 50%;
-    transition: 1.5s ease-in-out;
+    transition: 1s ease-in-out;
     transform: translate(-50%, -50%) rotate(0);
     &.animate {
       transform: translate(-50%, -50%) rotate(720deg);
     }
     > .menuItem {
-      width: 100px;
-      height: 100px;
+      width: 150px;
+      height: 150px;
       border: 1px solid;
       position: absolute;
-      transition: 1.5s ease-in-out;
+      transition: 1s ease-in-out;
+      opacity: 0;
+      &.animate {
+        opacity: 1;
+      }
       &.menu1 {
-        left: 50%;
-        top: 0;
-        transform: translate(50%, 0) rotate(0);
+        right: 50%;
+        top: 50%;
+        transform: translate(50%, -50%) rotate(0) scale(0);
         &.animate {
-          transform: translate(50%, 0) rotate(-720deg);
+          right: 0;
+          top: 0;
+          transform: translate(0, 0) rotate(-720deg) scale(1);
         }
       }
       &.menu2 {
-        left: 50%;
-        top: 50%;
-        transform: translate(50%, 50%) rotate(0);
+        right: 50%;
+        bottom: 50%;
+        transform: translate(50%, 50%) rotate(0) scale(0);
         &.animate {
-          transform: translate(50%, 50%) rotate(-720deg);
+          right: 0;
+          bottom: 0;
+          transform: translate(0, 0) rotate(-720deg) scale(1);
         }
       }
       &.menu3 {
-        left: 0;
-        top: 0;
-        transform: translate(0, 0) rotate(0);
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%) rotate(0) scale(0);
         &.animate {
-          transform: translate(0, 0) rotate(-720deg);
+          left: 0;
+          top: 0;
+          transform: translate(0, 0) rotate(-720deg) scale(1);
         }
       }
       &.menu4 {
-        left: 0;
-        top: 100%;
-        transform: translate(0, -100%) rotate(0);
+        left: 50%;
+        bottom: 50%;
+        transform: translate(-50%, 50%) rotate(0) scale(0);
         &.animate {
-          transform: translate(0, -100%) rotate(-720deg);
+          left: 0;
+          bottom: 0;
+          transform: translate(0, 0) rotate(-720deg) scale(1);
         }
       }
     }
