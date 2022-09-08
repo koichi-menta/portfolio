@@ -9,18 +9,16 @@ type Props = {
   className?: string;
 } & ContainerProps;
 
-const Component = ({ className }: Props): JSX.Element => (
-  <div className={className}>
+const Component = ({ className, onClick }: Props): JSX.Element => (
+  <div className={className} onClick={onClick}>
     <div className="background"></div>
     <p className="text">K</p>
   </div>
 );
 
 const StyledComponent = styled(Component)`
-  height: 100%;
-  width: 100%;
-  max-width: 100px;
-  max-height: 100px;
+  height: 100px;
+  width: 100px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -29,6 +27,7 @@ const StyledComponent = styled(Component)`
   background-color: #fa9;
   overflow: hidden;
   cursor: pointer;
+  padding: 4px;
   > .background {
     animation-name: animation-sample;
     animation-duration: 2s;
@@ -58,8 +57,8 @@ const StyledComponent = styled(Component)`
     justify-content: center;
     align-items: center;
     font-size: 65px;
-    width: calc(100% - 5px);
-    height: calc(100% - 5px);
+    width: 100%;
+    height: 100%;
     margin: 0;
     padding: 0;
     position: relative;

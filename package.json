@@ -12,6 +12,7 @@
     "ss": "storycap --serverCmd \"start-storybook -p 6006\" http://localhost:6006"
   },
   "dependencies": {
+    "clsx": "^1.2.1",
     "next": "12.2.5",
     "react": "18.2.0",
     "react-dom": "18.2.0",
