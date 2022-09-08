@@ -35,21 +35,20 @@ const StyledComponent = styled(Component)`
     width: 500px;
     height: 500px;
     border-radius: 50%;
-    /* border: 1px solid; */
     position: absolute;
     top: 50%;
     left: 50%;
-    transition: 1s ease-in-out;
+    transition: 0.5s ease-in-out;
     transform: translate(-50%, -50%) rotate(0);
     &.animate {
-      transform: translate(-50%, -50%) rotate(720deg);
+      transform: translate(-50%, -50%) rotate(360deg);
     }
     > .menuItem {
       width: 150px;
       height: 150px;
       border: 1px solid;
       position: absolute;
-      transition: 1s ease-in-out;
+      transition: 0.5s ease-in-out;
       opacity: 0;
       &.animate {
         opacity: 1;
@@ -61,7 +60,7 @@ const StyledComponent = styled(Component)`
         &.animate {
           right: 0;
           top: 0;
-          transform: translate(0, 0) rotate(-720deg) scale(1);
+          transform: translate(0, 0) rotate(-360deg) scale(1);
         }
       }
       &.menu2 {
@@ -71,7 +70,7 @@ const StyledComponent = styled(Component)`
         &.animate {
           right: 0;
           bottom: 0;
-          transform: translate(0, 0) rotate(-720deg) scale(1);
+          transform: translate(0, 0) rotate(-360deg) scale(1);
         }
       }
       &.menu3 {
@@ -81,7 +80,7 @@ const StyledComponent = styled(Component)`
         &.animate {
           left: 0;
           top: 0;
-          transform: translate(0, 0) rotate(-720deg) scale(1);
+          transform: translate(0, 0) rotate(-360deg) scale(1);
         }
       }
       &.menu4 {
@@ -91,7 +90,7 @@ const StyledComponent = styled(Component)`
         &.animate {
           left: 0;
           bottom: 0;
-          transform: translate(0, 0) rotate(-720deg) scale(1);
+          transform: translate(0, 0) rotate(-360deg) scale(1);
         }
       }
     }
