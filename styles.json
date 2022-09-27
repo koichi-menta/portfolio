@@ -1,0 +1,64 @@
+{
+  "global": {
+    "1": {
+      "value": "4",
+      "type": "spacing",
+      "description": "最小の余白"
+    },
+    "2": {
+      "value": "8",
+      "type": "spacing"
+    },
+    "mainBackground": {
+      "value": "#FFFFF8",
+      "type": "color",
+      "description": "bodyの背景色"
+    }
+  },
+  "portfolio": {
+    "colors": {
+      "background": {
+        "body": {
+          "value": "#fffff8",
+          "type": "color",
+          "description": "bodyの背景色"
+        }
+      }
+    },
+    "spacing": {
+      "0": {
+        "value": "0",
+        "type": "spacing"
+      },
+      "1": {
+        "value": "4",
+        "type": "spacing"
+      },
+      "2": {
+        "value": "8",
+        "type": "spacing"
+      },
+      "3": {
+        "value": "12",
+        "type": "spacing"
+      },
+      "4": {
+        "value": "16",
+        "type": "spacing"
+      }
+    },
+    "fontSize": {
+      "normal": {
+        "value": "14",
+        "type": "fontSizes"
+      }
+    }
+  },
+  "$themes": [],
+  "$metadata": {
+    "tokenSetOrder": [
+      "global",
+      "portfolio"
+    ]
+  }
+}
