@@ -1,7 +1,9 @@
-import React, { useState, Dispatch, SetStateAction, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import styled from "styled-components";
 import { MenuCard } from "src/components/parts/MenuCard";
 import clsx from "clsx";
+import { MenuItem } from "./MenuItem";
+import Link from "next/link";
 
 export type ContainerProps = {};
 type Props = {
@@ -15,15 +17,25 @@ const Component = ({ className, isOpen, handleClick }: Props): JSX.Element => (
     <MenuCard onClick={handleClick} />
     <div className={clsx("circle", isOpen && "animate")}>
       <div className={clsx("menuItem", "menu1", isOpen && "animate")}>
-        プロフィール
+        <Link href="/profile">
+          <MenuItem>プロフィール</MenuItem>
+        </Link>
       </div>
       <div className={clsx("menuItem", "menu2", isOpen && "animate")}>
-        スキル
+        <Link href="/faq">
+          <MenuItem>よくある質問</MenuItem>
+        </Link>
       </div>
       <div className={clsx("menuItem", "menu3", isOpen && "animate")}>
-        タイムライン
+        <Link href="/timeline">
+          <MenuItem>タイムライン</MenuItem>
+        </Link>
       </div>
-      <div className={clsx("menuItem", "menu4", isOpen && "animate")}>作品</div>
+      <div className={clsx("menuItem", "menu4", isOpen && "animate")}>
+        <Link href="/works">
+          <MenuItem>作品</MenuItem>
+        </Link>
+      </div>
     </div>
   </div>
 );
@@ -38,18 +50,17 @@ const StyledComponent = styled(Component)`
     position: absolute;
     top: 50%;
     left: 50%;
-    transition: 0.5s ease-in-out;
     transform: translate(-50%, -50%) rotate(0);
+    transition: 0.5s ease-in-out;
+
     &.animate {
       transform: translate(-50%, -50%) rotate(360deg);
     }
     > .menuItem {
-      width: 150px;
-      height: 150px;
-      border: 1px solid;
       position: absolute;
-      transition: 0.5s ease-in-out;
       opacity: 0;
+      transition: 0.5s ease-in-out;
+
       &.animate {
         opacity: 1;
       }

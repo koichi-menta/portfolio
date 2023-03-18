@@ -65,6 +65,7 @@ const StyledComponent = styled(Component)`
     z-index: 1;
     background-color: #fff;
     border-radius: 20px;
+    user-select: none;
   }
   @keyframes animation-sample {
     0% {
