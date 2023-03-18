@@ -17,7 +17,12 @@ const Component = ({ className, children }: Props): JSX.Element => (
 const StyledComponent = styled(Component)`
   width: 150px;
   height: 150px;
-  border: 1px solid;
+  border: 2px solid #333;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  border-radius: 10px;
 `;
 
 export const MenuItem = (props: ContainerProps): JSX.Element => {

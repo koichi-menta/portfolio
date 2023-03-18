@@ -4,6 +4,12 @@ import { MenuCard } from "src/components/parts/MenuCard";
 import clsx from "clsx";
 import { MenuItem } from "./MenuItem";
 import Link from "next/link";
+import {
+  TbTimelineEvent,
+  TbBrandWechat,
+  TbUserCircle,
+  TbAppWindow,
+} from "react-icons/tb";
 
 export type ContainerProps = {};
 type Props = {
@@ -17,23 +23,35 @@ const Component = ({ className, isOpen, handleClick }: Props): JSX.Element => (
     <MenuCard onClick={handleClick} />
     <div className={clsx("circle", isOpen && "animate")}>
       <div className={clsx("menuItem", "menu1", isOpen && "animate")}>
-        <Link href="/profile">
-          <MenuItem>プロフィール</MenuItem>
+        <Link href="/profile" className="link">
+          <MenuItem>
+            <TbUserCircle size="90px" strokeWidth={1} color="#333" />
+            <p className="text">プロフィール</p>
+          </MenuItem>
         </Link>
       </div>
       <div className={clsx("menuItem", "menu2", isOpen && "animate")}>
-        <Link href="/faq">
-          <MenuItem>よくある質問</MenuItem>
+        <Link href="/faq" className="link">
+          <MenuItem>
+            <TbBrandWechat size="90px" strokeWidth={1} color="#333" />
+            <p className="text">よくある質問</p>
+          </MenuItem>
         </Link>
       </div>
       <div className={clsx("menuItem", "menu3", isOpen && "animate")}>
-        <Link href="/timeline">
-          <MenuItem>タイムライン</MenuItem>
+        <Link href="/timeline" className="link">
+          <MenuItem>
+            <TbTimelineEvent size="90px" strokeWidth={1} color="#333" />
+            <p className="text">タイムライン</p>
+          </MenuItem>
         </Link>
       </div>
       <div className={clsx("menuItem", "menu4", isOpen && "animate")}>
-        <Link href="/works">
-          <MenuItem>作品</MenuItem>
+        <Link href="/works" className="link">
+          <MenuItem>
+            <TbAppWindow size="90px" strokeWidth={1} color="#333" />
+            <p className="text">作品</p>
+          </MenuItem>
         </Link>
       </div>
     </div>
@@ -60,6 +78,14 @@ const StyledComponent = styled(Component)`
       position: absolute;
       opacity: 0;
       transition: 0.5s ease-in-out;
+
+      > .link {
+        color: black;
+        text-decoration: none;
+        .text {
+          font-size: 10px;
+        }
+      }
 
       &.animate {
         opacity: 1;
