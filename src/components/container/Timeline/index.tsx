@@ -20,6 +20,6 @@ const Component = ({}: Props): JSX.Element => (
 
 const StyledComponent = styled(Component)``;
 
-export const Timeline = (props: ContainerProps): JSX.Element => {
+export const TimelineContainer = (props: ContainerProps): JSX.Element => {
   return <StyledComponent {...props} />;
 };

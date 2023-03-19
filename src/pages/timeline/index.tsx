@@ -1,20 +1,20 @@
 import type { NextPage } from "next";
 import Head from "next/head";
-import { ProfileContainer } from "src/components/container/Profile";
+import { TimelineContainer } from "src/components/container/Timeline";
 import { Layout } from "src/components/template/Layout";
 
-const Profile: NextPage = () => {
+const Timeline: NextPage = () => {
   return (
     <>
       <Head>
-        <title>Koichi's portfolio | profile</title>
+        <title>Koichi's portfolio | timeline</title>
         <meta name="description" content="Koichi's portfolio" />
       </Head>
       <Layout>
-        <ProfileContainer />
+        <TimelineContainer />
       </Layout>
     </>
   );
 };
 
-export default Profile;
+export default Timeline;
