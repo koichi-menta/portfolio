@@ -42,6 +42,14 @@ const StyledComponent = styled(Component)`
     list-style-type: none;
     display: flex;
     gap: 12px;
+    font-size: 14px;
+    > li {
+      > a {
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
   }
   a {
     color: #333;
