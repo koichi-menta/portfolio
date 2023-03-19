@@ -65,7 +65,7 @@ const StyledComponent = styled(Component)`
   align-items: center;
   padding: 0 32px;
   > .title {
-    margin-top: 32px;
+    margin-top: 16px;
   }
   > .profileImage {
     margin-top: 16px;

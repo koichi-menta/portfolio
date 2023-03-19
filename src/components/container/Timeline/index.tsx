@@ -38,9 +38,9 @@ const StyledComponent = styled(Component)`
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 32px;
+  padding: 0 16px;
   > .title {
-    margin-top: 32px;
+    margin-top: 16px;
   }
   > .timeline {
     width: 100%;
