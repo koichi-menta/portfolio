@@ -1,7 +1,7 @@
 import React from "react";
 import styled from "styled-components";
 import { Title } from "src/components/parts/Title";
-import { WorkSection } from "src/components/blocks/WorkSection";
+import { DevelopWorkSection } from "src/components/blocks/DevelopWorkSection";
 
 export type ContainerProps = {};
 type Props = {
@@ -13,7 +13,7 @@ const Component = ({ className }: Props): JSX.Element => (
     <div className="title">
       <Title>Works</Title>
     </div>
-    <WorkSection title="開発" link="#" description="ここに詳細が入ります" />
+    <DevelopWorkSection />
   </div>
 );
 

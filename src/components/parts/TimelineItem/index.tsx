@@ -16,15 +16,18 @@ type Props = {
 const Component = ({ children, genre, ...props }: Props): JSX.Element => (
   <VerticalTimelineElement
     contentStyle={{
-      background: "rgb(110, 153, 226)",
-      color: "#fff",
+      background: "#fffff8",
+      color: "#444",
       padding: "12px",
-    }}
-    contentArrowStyle={{ borderRight: "7px solid rgb(110, 153, 226)" }}
-    iconStyle={{
-      background: "rgb(110, 153, 226)",
-      color: "#fff",
+      border: "1px solid #666",
       boxShadow: "none",
+    }}
+    contentArrowStyle={{ borderRight: "7px solid #666" }}
+    iconStyle={{
+      background: "#fffff8",
+      color: "#444",
+      boxShadow: "none",
+      border: "1px solid #666",
     }}
     icon={<GenreIcon genre={genre} />}
     {...props}

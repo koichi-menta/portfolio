@@ -3,7 +3,7 @@ import styled from "styled-components";
 import clsx from "clsx";
 
 export type ContainerProps = {
-  type?: "platform";
+  type?: "default" | "platform";
   label: string;
 };
 type Props = {
