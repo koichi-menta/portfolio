@@ -24,7 +24,7 @@ const StyledComponent = styled(Component)`
   .header {
     border-bottom: 1px solid #aaa;
     > .inner {
-      width: 1000px;
+      max-width: 1000px;
       margin: 0 auto;
     }
   }

@@ -2,6 +2,7 @@ import React from "react";
 import styled from "styled-components";
 import { GenreLabel } from "src/components/parts/GenreLabel";
 import worksData from "src/works";
+import { device } from "src/constants/breakpoints";
 
 export type ContainerProps = {};
 type Props = {
@@ -54,14 +55,21 @@ const StyledComponent = styled(Component)`
     > .item {
       margin-top: 16px;
       display: flex;
+      flex-direction: column;
       border: 1px solid #666;
       border-radius: 10px;
-      padding: 16px 0;
+      padding: 0 16px;
+      @media (${device.tablet}) {
+        padding: 16px 0;
+        flex-direction: row;
+      }
       > .image {
-        width: 50%;
         flex-grow: 1;
         padding: 0 16px;
         max-width: 500px;
+        @media (${device.tablet}) {
+          width: 50%;
+        }
         > img {
           width: 100%;
           vertical-align: bottom;
@@ -69,13 +77,19 @@ const StyledComponent = styled(Component)`
         }
       }
       > .detail {
-        width: 50%;
         flex-grow: 1;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        padding: 0 16px;
-        border-left: 1px solid #666;
+        padding: 16px 0;
+        border-top: 1px solid #666;
+        @media (${device.tablet}) {
+          border-top: none;
+          border-left: 1px solid #666;
+          padding: 0 16px;
+          width: 50%;
+        }
+
         > .contents {
           display: flex;
           flex-direction: column;
@@ -94,6 +108,10 @@ const StyledComponent = styled(Component)`
           border: 1px solid #333;
           padding: 8px;
           border-radius: 5px;
+          margin-top: 12px;
+          @media (${device.tablet}) {
+            margin: 0;
+          }
           :hover {
             background-color: #fafafa;
           }

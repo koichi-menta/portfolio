@@ -1,6 +1,7 @@
 import React from "react";
 import styled from "styled-components";
 import Link from "next/link";
+import { device } from "src/constants/breakpoints";
 
 export type ContainerProps = {};
 type Props = {
@@ -37,12 +38,21 @@ const StyledComponent = styled(Component)`
   justify-content: space-between;
   > .title {
     user-select: none;
+    display: none;
+    @media (${device.tablet}) {
+      display: flex;
+    }
   }
   > .nemu {
     list-style-type: none;
     display: flex;
     gap: 12px;
     font-size: 14px;
+    width: 100%;
+    justify-content: space-between;
+    @media (${device.tablet}) {
+      width: auto;
+    }
     > li {
       > a {
         &:hover {

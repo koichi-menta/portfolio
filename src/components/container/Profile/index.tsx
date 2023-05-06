@@ -59,7 +59,7 @@ const Component = ({ className }: Props): JSX.Element => (
 );
 
 const StyledComponent = styled(Component)`
-  width: 550px;
+  max-width: 550px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;

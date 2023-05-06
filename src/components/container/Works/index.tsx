@@ -18,7 +18,7 @@ const Component = ({ className }: Props): JSX.Element => (
 );
 
 const StyledComponent = styled(Component)`
-  width: 1000px;
+  max-width: 1000px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
