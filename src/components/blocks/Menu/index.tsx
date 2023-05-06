@@ -10,6 +10,7 @@ import {
   TbUserCircle,
   TbAppWindow,
 } from "react-icons/tb";
+import { device } from "src/constants/breakpoints";
 
 export type ContainerProps = {};
 type Props = {
@@ -25,7 +26,7 @@ const Component = ({ className, isOpen, handleClick }: Props): JSX.Element => (
       <div className={clsx("menuItem", "menu1", isOpen && "animate")}>
         <Link href="/profile" className="link">
           <MenuItem>
-            <TbUserCircle size="90px" strokeWidth={1} color="#333" />
+            <TbUserCircle className="icon" strokeWidth={1} color="#333" />
             <p className="text">プロフィール</p>
           </MenuItem>
         </Link>
@@ -33,7 +34,7 @@ const Component = ({ className, isOpen, handleClick }: Props): JSX.Element => (
       <div className={clsx("menuItem", "menu2", isOpen && "animate")}>
         <Link href="/faq" className="link">
           <MenuItem>
-            <TbBrandWechat size="90px" strokeWidth={1} color="#333" />
+            <TbBrandWechat className="icon" strokeWidth={1} color="#333" />
             <p className="text">よくある質問</p>
           </MenuItem>
         </Link>
@@ -41,7 +42,7 @@ const Component = ({ className, isOpen, handleClick }: Props): JSX.Element => (
       <div className={clsx("menuItem", "menu3", isOpen && "animate")}>
         <Link href="/timeline" className="link">
           <MenuItem>
-            <TbTimelineEvent size="90px" strokeWidth={1} color="#333" />
+            <TbTimelineEvent className="icon" strokeWidth={1} color="#333" />
             <p className="text">タイムライン</p>
           </MenuItem>
         </Link>
@@ -49,7 +50,7 @@ const Component = ({ className, isOpen, handleClick }: Props): JSX.Element => (
       <div className={clsx("menuItem", "menu4", isOpen && "animate")}>
         <Link href="/works" className="link">
           <MenuItem>
-            <TbAppWindow size="90px" strokeWidth={1} color="#333" />
+            <TbAppWindow className="icon" strokeWidth={1} color="#333" />
             <p className="text">作品</p>
           </MenuItem>
         </Link>
@@ -62,14 +63,19 @@ const StyledComponent = styled(Component)`
   display: inline-block;
   position: relative;
   > .circle {
-    width: 500px;
-    height: 500px;
+    width: 330px;
+    height: 330px;
     border-radius: 50%;
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) rotate(0);
     transition: 0.5s ease-in-out;
+
+    @media (${device.tablet}) {
+      width: 500px;
+      height: 500px;
+    }
 
     &.animate {
       transform: translate(-50%, -50%) rotate(360deg);
@@ -84,6 +90,14 @@ const StyledComponent = styled(Component)`
         text-decoration: none;
         .text {
           font-size: 10px;
+        }
+        .icon {
+          width: 60px;
+          height: 60px;
+          @media (${device.tablet}) {
+            width: 90px;
+            height: 90px;
+          }
         }
       }
 

@@ -9,15 +9,23 @@ type Props = {
 
 const Component = ({ className }: Props): JSX.Element => (
   <div className={className}>
-    <Menu />
+    <div className="menu">
+      <Menu />
+    </div>
   </div>
 );
 
 const StyledComponent = styled(Component)`
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+  .menu {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
 `;
 
 export const Top = (props: ContainerProps): JSX.Element => {
