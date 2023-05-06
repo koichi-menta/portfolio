@@ -22,10 +22,9 @@ const Component = ({ children, genre, ...props }: Props): JSX.Element => (
     }}
     contentArrowStyle={{ borderRight: "7px solid rgb(110, 153, 226)" }}
     iconStyle={{
-      background: "rgb(166, 196, 246)",
+      background: "rgb(110, 153, 226)",
       color: "#fff",
-      boxShadow:
-        "0 0 0 3px #333, inset 0 2px 0 rgba(0,0,0,.08), 0 3px 0 4px rgba(0,0,0,.05)",
+      boxShadow: "none",
     }}
     icon={<GenreIcon genre={genre} />}
     {...props}

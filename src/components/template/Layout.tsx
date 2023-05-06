@@ -22,7 +22,7 @@ const Component = ({ className, children }: Props): JSX.Element => (
 
 const StyledComponent = styled(Component)`
   .header {
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid #aaa;
     > .inner {
       width: 1000px;
       margin: 0 auto;

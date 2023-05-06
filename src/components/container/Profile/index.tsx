@@ -4,6 +4,7 @@ import Link from "next/link";
 import { TbBrandGithub, TbBrandTwitter, TbBrandYoutube } from "react-icons/tb";
 import { Title } from "src/components/parts/Title";
 import { ProfileImage } from "src/components/parts/ProfileImage";
+import { colors } from "src/constants/colors";
 
 export type ContainerProps = {};
 type Props = {
@@ -63,7 +64,7 @@ const StyledComponent = styled(Component)`
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0 32px;
+  padding: 0 16px;
   > .title {
     margin-top: 16px;
   }
@@ -79,20 +80,20 @@ const StyledComponent = styled(Component)`
   }
   > .adoptionNotice {
     margin-top: 16px;
-    color: #333;
+    color: ${colors.mainText};
     .link {
-      color: #333;
+      color: ${colors.mainText};
     }
   }
   > .description {
     margin-top: 16px;
     font-size: 14px;
-    color: #333;
+    color: ${colors.mainText};
   }
   > .skills {
     margin-top: 16px;
     font-size: 14px;
-    color: #333;
+    color: ${colors.mainText};
   }
 `;
 

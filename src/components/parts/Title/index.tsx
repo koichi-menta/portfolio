@@ -13,7 +13,7 @@ const Component = ({ className, children }: Props): JSX.Element => (
 );
 
 const StyledComponent = styled(Component)`
-  color: #333;
+  color: #444;
 `;
 
 export const Title = (props: ContainerProps): JSX.Element => {

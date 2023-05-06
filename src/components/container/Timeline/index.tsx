@@ -17,7 +17,7 @@ const Component = ({ className }: Props): JSX.Element => (
       <Title>Timeline</Title>
     </div>
     <div className="timeline">
-      <VerticalTimeline lineColor="#4c4c4c">
+      <VerticalTimeline lineColor="rgb(166, 196, 246)">
         {timelineData.map((item) => (
           <TimelineItem className="item" genre={item.genre}>
             <div className="top">
