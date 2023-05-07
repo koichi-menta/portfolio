@@ -34,6 +34,9 @@ const StyledComponent = styled(Component)`
   }
   > .faq {
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
     margin-top: 32px;
   }
 `;
