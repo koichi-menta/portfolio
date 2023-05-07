@@ -15,8 +15,8 @@ const Component = ({ className }: Props): JSX.Element => (
       <Title>よくある質問</Title>
     </div>
     <div className="faq">
-      {faqData.map((item) => (
-        <FaqItem question={item.question} answer={item.answer} />
+      {faqData.map((item, index) => (
+        <FaqItem question={item.question} answer={item.answer} key={index} />
       ))}
     </div>
   </div>
