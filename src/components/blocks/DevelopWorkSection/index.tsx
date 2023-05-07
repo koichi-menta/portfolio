@@ -34,9 +34,11 @@ const Component = ({ className }: Props): JSX.Element => (
                 </div>
                 <p className="description">{item.description}</p>
               </div>
-              <a className="link" href={item.href}>
-                サイトを見る
-              </a>
+              {item.href && (
+                <a className="link" href={item.href}>
+                  サイトを見る
+                </a>
+              )}
             </div>
           </div>
         );
@@ -102,6 +104,10 @@ const StyledComponent = styled(Component)`
           .genre {
             display: flex;
             gap: 8px;
+            flex-wrap: wrap;
+          }
+          > .description {
+            font-size: 14px;
           }
         }
         > .link {

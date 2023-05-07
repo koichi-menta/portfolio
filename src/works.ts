@@ -13,10 +13,13 @@ const works: WorksData[] = [
     src: "/images/work_portfolio.png",
     genre: [
       { type: "platform", label: "Web App" },
-      { type: "default", label: "Desktop App" },
+      { type: "default", label: "Next.js" },
+      { type: "default", label: "TypeScript" },
+      { type: "default", label: "Styled Components" },
+      { type: "default", label: "Storybook" },
     ],
-    description: `詳細が入ります`,
-    href: "#",
+    description: `このサイトです。トップページには遊び心を追加して、メインコンテンツは余計なギミックを無くしてシンプルに表示しています。`,
+    href: "",
   },
 ];
 
