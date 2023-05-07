@@ -45,12 +45,11 @@ const StyledComponent = styled(Component)`
   > .timeline {
     width: 100%;
     margin-top: 16px;
+    overflow: hidden; /* timelineライブラリ用 */
     .item {
       .top {
         font-size: 13px;
         line-height: 13px;
-        > span {
-        }
       }
       .description {
         font-size: 15px;

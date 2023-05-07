@@ -28,6 +28,7 @@ const StyledComponent = styled(Component)`
   overflow: hidden;
   cursor: pointer;
   padding: 4px;
+  z-index: 1;
   > .background {
     animation-name: animation-sample;
     animation-duration: 2s;

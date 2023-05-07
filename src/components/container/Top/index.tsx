@@ -17,7 +17,7 @@ const Component = ({ className }: Props): JSX.Element => (
 
 const StyledComponent = styled(Component)`
   width: 100vw;
-  height: 100vh;
+  height: 100svh;
   overflow: hidden;
   position: relative;
   .menu {
