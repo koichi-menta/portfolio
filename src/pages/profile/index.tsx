@@ -7,7 +7,7 @@ const Profile: NextPage = () => {
   return (
     <>
       <Head>
-        <title>Koichi's portfolio | profile</title>
+        <title>Koichi&apos;s portfolio | profile</title>
         <meta name="description" content="Koichi's portfolio" />
       </Head>
       <Layout>

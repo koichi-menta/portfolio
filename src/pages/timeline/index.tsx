@@ -7,7 +7,7 @@ const Timeline: NextPage = () => {
   return (
     <>
       <Head>
-        <title>Koichi's portfolio | timeline</title>
+        <title>Koichi&apos;s portfolio | timeline</title>
         <meta name="description" content="Koichi's portfolio" />
       </Head>
       <Layout>

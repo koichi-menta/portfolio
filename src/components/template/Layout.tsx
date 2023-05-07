@@ -1,6 +1,7 @@
 import React, { ReactNode } from "react";
 import styled from "styled-components";
 import { Header } from "src/components/blocks/Header";
+import Link from "next/link";
 
 export type ContainerProps = {
   children: ReactNode;
@@ -18,9 +19,9 @@ const Component = ({ className, children }: Props): JSX.Element => (
     </div>
     <div className="main">{children}</div>
     <div className="footer">
-      <a href="/" className="link">
+      <Link href="/" className="link">
         トップページに戻る
-      </a>
+      </Link>
       <small className="copyright">&copy; 2023 Koichi</small>
     </div>
   </div>

@@ -3,6 +3,7 @@ import styled from "styled-components";
 import { GenreLabel } from "src/components/parts/GenreLabel";
 import worksData from "src/works";
 import { device } from "src/constants/breakpoints";
+import Image from "next/image";
 
 export type ContainerProps = {};
 type Props = {
@@ -13,18 +14,22 @@ const Component = ({ className }: Props): JSX.Element => (
   <div className={className}>
     <h3 className="title">開発</h3>
     <div className="works">
-      {worksData.map((item) => {
+      {worksData.map((item, index) => {
         return (
-          <div className="item">
+          <div className="item" key={index}>
             <div className="image">
-              <img src={item.src} width={500} height={300} alt="" />
+              <Image src={item.src} width={500} height={300} alt="" />
             </div>
             <div className="detail">
               <div className="contents">
                 <h4>{item.title}</h4>
                 <div className="genre">
-                  {item.genre.map((genre) => (
-                    <GenreLabel type={genre.type} label={genre.label} />
+                  {item.genre.map((genre, index) => (
+                    <GenreLabel
+                      type={genre.type}
+                      label={genre.label}
+                      key={index}
+                    />
                   ))}
                 </div>
                 <p className="description">{item.description}</p>

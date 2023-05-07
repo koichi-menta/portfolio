@@ -7,7 +7,7 @@ const Faq: NextPage = () => {
   return (
     <>
       <Head>
-        <title>Koichi's portfolio | faq</title>
+        <title>Koichi&apos;s portfolio | faq</title>
         <meta name="description" content="Koichi's portfolio" />
       </Head>
       <Layout>

@@ -1,15 +1,15 @@
 import React from "react";
-import { Timeline, ContainerProps } from ".";
+import { TimelineContainer, ContainerProps } from ".";
 import { ComponentStory, ComponentMeta } from "@storybook/react";
 
 export default {
-  component: Timeline,
-  title: "container/Timeline",
-} as ComponentMeta<typeof Timeline>;
+  component: TimelineContainer,
+  title: "container/TimelineContainer",
+} as ComponentMeta<typeof TimelineContainer>;
 
-const Template: ComponentStory<typeof Timeline> = (props: ContainerProps) => (
-  <Timeline {...props} />
-);
+const Template: ComponentStory<typeof TimelineContainer> = (
+  props: ContainerProps
+) => <TimelineContainer {...props} />;
 
 export const Default = Template.bind({});
 

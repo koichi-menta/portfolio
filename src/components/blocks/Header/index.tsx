@@ -11,7 +11,7 @@ type Props = {
 const Component = ({ className }: Props): JSX.Element => (
   <nav className={className}>
     <h1 className="title">
-      <Link href="/">Koichi's portfolio</Link>
+      <Link href="/">Koichi&apos;s portfolio</Link>
     </h1>
     <ul className="nemu">
       <li>
