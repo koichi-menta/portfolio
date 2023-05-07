@@ -21,7 +21,7 @@ const Component = ({ className }: Props): JSX.Element => (
         {timelineData.map((item) => (
           <TimelineItem className="item" genre={item.genre} key={item.title}>
             <div className="top">
-              <span>{item.date}</span>
+              <span className="date">{item.date}</span>
               <span>&nbsp;{item.title}</span>
             </div>
             <p className="description">{item.description}</p>
@@ -48,8 +48,13 @@ const StyledComponent = styled(Component)`
     overflow: hidden; /* timelineライブラリ用 */
     .item {
       .top {
-        font-size: 13px;
-        line-height: 13px;
+        font-size: 14px;
+        border-bottom: 1px solid;
+        padding-bottom: 8px;
+        line-height: 1.4;
+        > .date {
+          font-weight: bold;
+        }
       }
       .description {
         font-size: 15px;

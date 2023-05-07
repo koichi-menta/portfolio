@@ -30,13 +30,18 @@ const Component = ({ children, genre, ...props }: Props): JSX.Element => (
       border: "1px solid #666",
     }}
     icon={<GenreIcon genre={genre} />}
+    dateClassName={"defaultDate"}
     {...props}
   >
     {children}
   </VerticalTimelineElement>
 );
 
-const StyledComponent = styled(Component)``;
+const StyledComponent = styled(Component)`
+  .defaultDate {
+    padding: 0;
+  }
+`;
 
 export const TimelineItem = (props: ContainerProps): JSX.Element => {
   return <StyledComponent {...props} />;
