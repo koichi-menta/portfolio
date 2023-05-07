@@ -52,7 +52,7 @@ const Component = ({ className }: Props): JSX.Element => (
       </strong>
     </div>
     <p className="description">
-      フリーランスエンジニア。チームファーストで仕事をする。元プログラミングスクール講師。MENTAでフロントエンドの学習相談を受付中。Kindle本「リモートワークサラリーマン」を出版。最近はPythonで遊んでる。
+      フリーランスのフロントエンドエンジニア。チームファーストで仕事をすることを心がけています。元プログラミングスクール講師。MENTAでフロントエンドの学習相談を受付中。
     </p>
     <p className="skills">React/TypeScript/Next.js/GraphQL</p>
   </div>
