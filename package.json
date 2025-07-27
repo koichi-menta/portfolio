@@ -6,14 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "storybook": "start-storybook -p 6006",
-    "build-storybook": "build-storybook",
-    "ss": "storycap --serverCmd \"start-storybook -p 6006\" http://localhost:6006"
+    "lint": "next lint"
   },
   "dependencies": {
     "clsx": "^1.2.1",
-    "next": "^13.2.4",
+    "next": "^15",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-icons": "^4.8.0",
@@ -22,14 +19,6 @@
   },
   "devDependencies": {
     "@babel/core": "^7.18.13",
-    "@storybook/addon-actions": "^6.5.10",
-    "@storybook/addon-essentials": "^6.5.10",
-    "@storybook/addon-interactions": "^6.5.10",
-    "@storybook/addon-links": "^6.5.10",
-    "@storybook/builder-webpack5": "^6.5.10",
-    "@storybook/manager-webpack5": "^6.5.10",
-    "@storybook/react": "^6.5.10",
-    "@storybook/testing-library": "^0.0.13",
     "@types/node": "18.7.14",
     "@types/react": "18.0.17",
     "@types/react-dom": "18.0.6",
@@ -38,9 +27,10 @@
     "babel-loader": "^8.2.5",
     "eslint": "8.23.0",
     "eslint-config-next": "12.2.5",
+    "playwright": "^1.54.1",
     "reg-keygen-git-hash-plugin": "^0.12.1",
-    "reg-suit": "^0.12.1",
-    "storycap": "^3.1.9",
+    "reg-suit": "^0.14",
     "typescript": "4.8.2"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha1.ac34549e6aa8e7ead463a7407e1c7390f61a6610"
 }
