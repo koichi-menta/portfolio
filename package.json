@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "clsx": "^1.2.1",
@@ -19,6 +21,13 @@
   },
   "devDependencies": {
     "@babel/core": "^7.18.13",
+    "@storybook/addon-essentials": "^8.6.14",
+    "@storybook/addon-interactions": "^8.6.14",
+    "@storybook/addon-links": "8.6.14",
+    "@storybook/manager-api": "8.6.14",
+    "@storybook/preview-api": "8.6.14",
+    "@storybook/react": "8.6.14",
+    "@storybook/react-webpack5": "8.6.14",
     "@types/node": "18.7.14",
     "@types/react": "18.0.17",
     "@types/react-dom": "18.0.6",
@@ -27,10 +36,14 @@
     "babel-loader": "^8.2.5",
     "eslint": "8.23.0",
     "eslint-config-next": "12.2.5",
+    "eslint-plugin-storybook": "0.8.0",
     "playwright": "^1.54.1",
     "reg-keygen-git-hash-plugin": "^0.12.1",
     "reg-suit": "^0.14",
-    "typescript": "4.8.2"
+    "storybook": "8.6.14",
+    "storycap": "^5.0.1",
+    "typescript": "4.8.2",
+    "vite": "^7.0.6"
   },
   "packageManager": "yarn@1.22.22+sha1.ac34549e6aa8e7ead463a7407e1c7390f61a6610"
 }
