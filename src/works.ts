@@ -21,6 +21,18 @@ const works: WorksData[] = [
     description: `このサイトです。トップページには遊び心を追加して、メインコンテンツは余計なギミックを無くしてシンプルに表示しています。`,
     href: "",
   },
+  {
+    title: "ドットキャラクターメーカー",
+    src: "/images/work_dot_char_maker.png",
+    genre: [
+      { type: "platform", label: "Web App" },
+      { type: "default", label: "React" },
+      { type: "default", label: "TypeScript" },
+      { type: "default", label: "Claude Code" },
+    ],
+    description: `ドットキャラクターをランダムな組み合わせで作成しダウンロードできるアプリです。`,
+    href: "https://koichi-menta.github.io/dot-character-maker/",
+  },
 ];
 
 export default works;
