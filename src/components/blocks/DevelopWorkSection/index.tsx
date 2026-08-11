@@ -35,7 +35,12 @@ const Component = ({ className }: Props): JSX.Element => (
                 <p className="description">{item.description}</p>
               </div>
               {item.href && (
-                <a className="link" target="_blank" href={item.href}>
+                <a
+                  className="link"
+                  target="_blank"
+                  rel="noreferrer"
+                  href={item.href}
+                >
                   サイトを見る
                 </a>
               )}
