@@ -84,8 +84,11 @@ const StyledComponent = styled(Component)`
         }
         > img {
           width: 100%;
+          height: auto;
+          aspect-ratio: 5 / 3;
           vertical-align: bottom;
-          object-fit: cover;
+          object-fit: contain;
+          background-color: #e8e8e4;
         }
       }
       > .detail {
