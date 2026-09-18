@@ -1,7 +1,7 @@
 import React from "react";
 import styled from "styled-components";
 import Link from "next/link";
-import { TbBrandGithub, TbBrandTwitter, TbBrandYoutube } from "react-icons/tb";
+import { TbBrandGithub, TbBrandTwitter } from "react-icons/tb";
 import { Title } from "src/components/parts/Title";
 import { ProfileImage } from "src/components/parts/ProfileImage";
 import { colors } from "src/constants/colors";
@@ -34,13 +34,6 @@ const Component = ({ className }: Props): JSX.Element => (
       >
         <TbBrandTwitter size={30} color="#333" title="twitter" />
       </a>
-      <a
-        href="https://www.youtube.com/@multipotential_playwork"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <TbBrandYoutube size={30} color="#333" title="youtube" />
-      </a>
     </div>
     <div className="adoptionNotice">
       <strong>
@@ -52,9 +45,13 @@ const Component = ({ className }: Props): JSX.Element => (
       </strong>
     </div>
     <p className="description">
-      フリーランスのフロントエンドエンジニア。チームファーストで仕事をすることを心がけています。元プログラミングスクール講師。MENTAでフロントエンドの学習相談を受付中。
+      フロントエンドエンジニア。React/TypeScriptを軸に開発しています。過去にLaravelでのバックエンド開発経験があるため、API設計やデータの持ち方を意識したうえでフロントを組み立てられます。個人開発ではSupabaseを使ったサービスも作っており、今後はバックエンドエンジニアとしても動けるよう現在はNestJSを学習中です。チームファーストで仕事をすることを心がけています。
     </p>
-    <p className="skills">React/TypeScript/Next.js/GraphQL</p>
+    <div className="skills">
+      <p>React/TypeScript/Next.js/GraphQL/Material UI</p>
+      <p>Playwright/Testing Library/Figma</p>
+      <p>Claude/Cursor/Codex</p>
+    </div>
   </div>
 );
 
@@ -94,6 +91,10 @@ const StyledComponent = styled(Component)`
     margin-top: 16px;
     font-size: 14px;
     color: ${colors.mainText};
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
   }
 `;
 
