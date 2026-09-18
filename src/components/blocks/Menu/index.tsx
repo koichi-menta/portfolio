@@ -24,10 +24,10 @@ const Component = ({ className, isOpen, handleClick }: Props): JSX.Element => (
     <MenuCard onClick={handleClick} />
     <div className={clsx("circle", isOpen && "animate")}>
       <div className={clsx("menuItem", "menu1", isOpen && "animate")}>
-        <Link href="/profile" className="link">
+        <Link href="/timeline" className="link">
           <MenuItem>
-            <TbUserCircle className="icon" strokeWidth={1} color="#333" />
-            <p className="text">プロフィール</p>
+            <TbTimelineEvent className="icon" strokeWidth={1} color="#333" />
+            <p className="text">タイムライン</p>
           </MenuItem>
         </Link>
       </div>
@@ -40,10 +40,10 @@ const Component = ({ className, isOpen, handleClick }: Props): JSX.Element => (
         </Link>
       </div>
       <div className={clsx("menuItem", "menu3", isOpen && "animate")}>
-        <Link href="/timeline" className="link">
+        <Link href="/profile" className="link">
           <MenuItem>
-            <TbTimelineEvent className="icon" strokeWidth={1} color="#333" />
-            <p className="text">タイムライン</p>
+            <TbUserCircle className="icon" strokeWidth={1} color="#333" />
+            <p className="text">プロフィール</p>
           </MenuItem>
         </Link>
       </div>
