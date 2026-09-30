@@ -4,6 +4,7 @@ import { GenreLabel } from "src/components/parts/GenreLabel";
 import worksData from "src/works";
 import { device } from "src/constants/breakpoints";
 import Image from "next/image";
+import Link from "next/link";
 
 export type ContainerProps = {};
 type Props = {
@@ -34,15 +35,24 @@ const Component = ({ className }: Props): JSX.Element => (
                 </div>
                 <p className="description">{item.description}</p>
               </div>
-              {item.href && (
-                <a
-                  className="link"
-                  target="_blank"
-                  rel="noreferrer"
-                  href={item.href}
-                >
-                  サイトを見る
-                </a>
+              {(item.detail || item.href) && (
+                <div className="actions">
+                  {item.detail && (
+                    <Link className="link" href={`/works/${item.slug}`}>
+                      詳細を見る
+                    </Link>
+                  )}
+                  {item.href && (
+                    <a
+                      className="link"
+                      target="_blank"
+                      rel="noreferrer"
+                      href={item.href}
+                    >
+                      サイトを見る
+                    </a>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -118,21 +128,26 @@ const StyledComponent = styled(Component)`
             font-size: 14px;
           }
         }
-        > .link {
-          width: 100%;
-          display: block;
-          text-align: center;
-          color: #333;
-          text-decoration: none;
-          border: 1px solid #333;
-          padding: 8px;
-          border-radius: 5px;
+        > .actions {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
           margin-top: 12px;
           @media (${device.tablet}) {
-            margin: 0;
+            margin-top: 16px;
           }
-          :hover {
-            background-color: #fafafa;
+          > .link {
+            width: 100%;
+            display: block;
+            text-align: center;
+            color: #333;
+            text-decoration: none;
+            border: 1px solid #333;
+            padding: 8px;
+            border-radius: 5px;
+            :hover {
+              background-color: #fafafa;
+            }
           }
         }
       }
