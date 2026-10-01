@@ -29,6 +29,66 @@ export type WorksData = {
 
 const works: WorksData[] = [
   {
+    slug: "post-cue-studio",
+    title: "X運用アプリ「post-cue-studio」",
+    src: "/images/work_post_cue_studio.png",
+    genre: [
+      { type: "platform", label: "Web App" },
+      { type: "default", label: "React Router" },
+      { type: "default", label: "TypeScript" },
+      { type: "default", label: "NestJS" },
+      { type: "default", label: "PostgreSQL" },
+      { type: "default", label: "OpenAI API" },
+      { type: "default", label: "X API" },
+      { type: "default", label: "AWS" },
+      { type: "default", label: "Cloudflare" },
+      { type: "default", label: "Claude Code" },
+    ],
+    description: `リポジトリのPRやdocフォルダを一次情報にして、AIにポスト内容を考えてもらうX運用アプリ。予約投稿へのリプライも予約投稿できます。`,
+    href: "",
+    detail: {
+      overview: `リポジトリのPRやdocフォルダを読み取り、それを一次情報としてAIにポスト内容を考えてもらうアプリです。
+考えてもらったポストは、その場で投稿することも、予約投稿することもできます。
+最大の特徴は、予約投稿のリプライに予約投稿できることです。
+長文のポストをスレッドに分けて一気に投稿したい時や、アンケートポストをしてアンケート締切時間にリプでメッセージしたい時などに、自動でポストすることができます。
+自分用に作成した専用アプリのため、一般公開はしていません。`,
+      background: `自分が運営しているNarikiEigoのSNSで使えないかと思い、自分用に作成した。`,
+      techStack: [
+        {
+          category: "フロントエンド",
+          items: ["React", "React Router", "TypeScript"],
+        },
+        { category: "バックエンド", items: ["NestJS", "Prisma", "PostgreSQL"] },
+        { category: "外部API", items: ["X API", "GitHub API", "OpenAI API"] },
+        { category: "認証", items: ["Amazon Cognito"] },
+        {
+          category: "インフラ",
+          items: [
+            "AWS Lightsail",
+            "AWS CDK",
+            "Docker Compose",
+            "Cloudflare Workers",
+            "Cloudflare Tunnel",
+          ],
+        },
+        {
+          category: "開発支援",
+          items: ["Claude Code", "Cursor", "Codex", "Remotion"],
+        },
+      ],
+      challenges: [
+        {
+          title: "初めてのAWSへのデプロイ",
+          body: "AWSにデプロイするのは初めての試みだったので、AWS IAM Identity CenterとIAMの違いや、その他のサービスの役割を理解するのが大変だった。",
+        },
+        {
+          title: "インフラをコードで管理する",
+          body: "Cloudflareは利用したことがあったが、設定はすべてUIで行っていた。今回はAWS CDKを使ってインフラをコードで管理し、デプロイもコマンドで行ったので新鮮だった。",
+        },
+      ],
+    },
+  },
+  {
     slug: "nariki-eigo",
     title: "ロールプレイ型英語学習ゲーム「NarikiEigo」",
     src: "/images/work_nariki_eigo.png",
