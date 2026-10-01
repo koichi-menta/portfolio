@@ -18,7 +18,7 @@ const Component = ({ className }: Props): JSX.Element => (
     </div>
     <div className="timeline">
       <VerticalTimeline lineColor="#666">
-        {timelineData.map((item) => (
+        {[...timelineData].reverse().map((item) => (
           <TimelineItem className="item" genre={item.genre} key={item.title}>
             <div className="top">
               <span className="date">{item.date}</span>
