@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import styled from "styled-components";
 import { MenuCard } from "src/components/parts/MenuCard";
 import clsx from "clsx";
@@ -11,17 +11,41 @@ import {
   TbAppWindow,
 } from "react-icons/tb";
 import { device } from "src/constants/breakpoints";
+import { useDopagakiMode } from "src/contexts/DopagakiMode";
+
+// この間隔を空けずにメニューを連続で開閉するとドパガキモードになる
+const COMBO_INTERVAL_MS = 1000;
+const COMBO_CLICKS_TO_TRIGGER = 6;
 
 export type ContainerProps = {};
 type Props = {
   className?: string;
   isOpen: boolean;
+  isDopagaki: boolean;
+  combo: number;
   handleClick: () => void;
 } & ContainerProps;
 
-const Component = ({ className, isOpen, handleClick }: Props): JSX.Element => (
+const Component = ({
+  className,
+  isOpen,
+  isDopagaki,
+  combo,
+  handleClick,
+}: Props): JSX.Element => (
   <div className={className}>
-    <MenuCard onClick={handleClick} />
+    <div
+      className={clsx(
+        "card",
+        combo >= 2 && "shake",
+        combo >= 4 && "shakeHard"
+      )}
+    >
+      <MenuCard
+        onClick={handleClick}
+        variant={isDopagaki ? "gradient" : "solid"}
+      />
+    </div>
     <div className={clsx("circle", isOpen && "animate")}>
       <div className={clsx("menuItem", "menu1", isOpen && "animate")}>
         <Link href="/timeline" className="link">
@@ -62,6 +86,36 @@ const Component = ({ className, isOpen, handleClick }: Props): JSX.Element => (
 const StyledComponent = styled(Component)`
   display: inline-block;
   position: relative;
+  /* 連打が続くほど揺れが大きくなり、あと少しで何か起きそうだと知らせる */
+  > .card {
+    /* 揺れ(transform)で重なり順の基準が変わっても、カードを円より前面に保つ */
+    position: relative;
+    z-index: 1;
+    &.shake {
+      animation: menu-card-shake 0.3s linear infinite;
+    }
+    &.shakeHard {
+      animation-duration: 0.15s;
+      filter: drop-shadow(0 0 8px #ff6ad5);
+    }
+  }
+  @keyframes menu-card-shake {
+    0% {
+      transform: translate(0, 0) rotate(0);
+    }
+    25% {
+      transform: translate(-2px, 1px) rotate(-3deg);
+    }
+    50% {
+      transform: translate(1px, -2px) rotate(2deg);
+    }
+    75% {
+      transform: translate(2px, 1px) rotate(-2deg);
+    }
+    100% {
+      transform: translate(0, 0) rotate(0);
+    }
+  }
   > .circle {
     width: 330px;
     height: 330px;
@@ -150,12 +204,43 @@ const StyledComponent = styled(Component)`
 
 export const Menu = (props: ContainerProps): JSX.Element => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [combo, setCombo] = useState<number>(0);
+  const { isDopagaki, enable } = useDopagakiMode();
+  const lastClickedAtRef = useRef<number>(0);
+  const comboResetTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => () => clearTimeout(comboResetTimerRef.current), []);
 
   const handleClick = useCallback(() => {
-    setIsOpen(!isOpen);
-  }, [isOpen]);
+    setIsOpen((prev) => !prev);
+    if (isDopagaki) return;
+
+    // ページ遷移でこのコンポーネントがアンマウントされるので、回数も自然にリセットされる
+    const now = Date.now();
+    const nextCombo =
+      now - lastClickedAtRef.current < COMBO_INTERVAL_MS ? combo + 1 : 1;
+    lastClickedAtRef.current = now;
+    clearTimeout(comboResetTimerRef.current);
+
+    if (nextCombo >= COMBO_CLICKS_TO_TRIGGER) {
+      setCombo(0);
+      enable();
+      return;
+    }
+    setCombo(nextCombo);
+    comboResetTimerRef.current = setTimeout(
+      () => setCombo(0),
+      COMBO_INTERVAL_MS
+    );
+  }, [combo, isDopagaki, enable]);
 
   return (
-    <StyledComponent {...props} isOpen={isOpen} handleClick={handleClick} />
+    <StyledComponent
+      {...props}
+      isOpen={isOpen}
+      isDopagaki={isDopagaki}
+      combo={combo}
+      handleClick={handleClick}
+    />
   );
 };
