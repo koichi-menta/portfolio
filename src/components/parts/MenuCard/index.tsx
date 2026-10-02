@@ -1,18 +1,26 @@
 import React from "react";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
+import Image from "next/image";
+import logo_image from "public/logo.svg";
+
+// gradient: 虹色のグラデーションが回転する枠 / solid: 単色の線の枠
+export type FrameVariant = "gradient" | "solid";
 
 export type ContainerProps = {
   onClick: () => void;
+  variant?: FrameVariant;
 };
 
 type Props = {
   className?: string;
 } & ContainerProps;
 
-const Component = ({ className, onClick }: Props): JSX.Element => (
+const Component = ({ className, onClick, variant }: Props): JSX.Element => (
   <div className={className} onClick={onClick}>
-    <div className="background"></div>
-    <p className="text">K</p>
+    {variant === "gradient" && <div className="background"></div>}
+    <div className="logo">
+      <Image src={logo_image} alt="ロゴ" className="image" />
+    </div>
   </div>
 );
 
@@ -24,10 +32,17 @@ const StyledComponent = styled(Component)`
   align-items: center;
   border-radius: 20px;
   position: relative;
-  background-color: #fa9;
   overflow: hidden;
   cursor: pointer;
-  padding: 4px;
+  ${({ variant }) =>
+    variant === "gradient"
+      ? css`
+          background-color: #fa9;
+          padding: 4px;
+        `
+      : css`
+          border: 3px solid #1f1f1f;
+        `}
   z-index: 1;
   > .background {
     animation-name: animation-sample;
@@ -53,20 +68,25 @@ const StyledComponent = styled(Component)`
       blue
     );
   }
-  > .text {
+  > .logo {
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 65px;
     width: 100%;
     height: 100%;
     margin: 0;
     padding: 0;
     position: relative;
     z-index: 1;
-    background-color: #fff;
+    /* gradient のときは白背景でグラデーションを覆って枠に見せる */
+    background-color: ${({ variant }) =>
+      variant === "gradient" ? "#fff" : "transparent"};
     border-radius: 20px;
     user-select: none;
+    > .image {
+      width: auto;
+      height: 60%;
+    }
   }
   @keyframes animation-sample {
     0% {
@@ -78,6 +98,9 @@ const StyledComponent = styled(Component)`
   }
 `;
 
-export const MenuCard = (props: ContainerProps): JSX.Element => {
-  return <StyledComponent {...props} />;
+export const MenuCard = ({
+  variant = "solid",
+  ...props
+}: ContainerProps): JSX.Element => {
+  return <StyledComponent variant={variant} {...props} />;
 };
