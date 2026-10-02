@@ -1,12 +1,12 @@
 import "src/styles/global.css";
 import type { AppProps } from "next/app";
-import { DopagakiModeProvider } from "src/contexts/DopagakiMode";
+import { DopamineModeProvider } from "src/contexts/DopamineMode";
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
-    <DopagakiModeProvider>
+    <DopamineModeProvider>
       <Component {...pageProps} />
-    </DopagakiModeProvider>
+    </DopamineModeProvider>
   );
 }
 

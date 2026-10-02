@@ -11,9 +11,9 @@ import {
   TbAppWindow,
 } from "react-icons/tb";
 import { device } from "src/constants/breakpoints";
-import { useDopagakiMode } from "src/contexts/DopagakiMode";
+import { useDopamineMode } from "src/contexts/DopamineMode";
 
-// この間隔を空けずにメニューを連続で開閉するとドパガキモードになる
+// この間隔を空けずにメニューを連続で開閉するとドーパミンモードになる
 const COMBO_INTERVAL_MS = 1000;
 const COMBO_CLICKS_TO_TRIGGER = 6;
 
@@ -21,7 +21,7 @@ export type ContainerProps = {};
 type Props = {
   className?: string;
   isOpen: boolean;
-  isDopagaki: boolean;
+  isDopamine: boolean;
   combo: number;
   handleClick: () => void;
 } & ContainerProps;
@@ -29,7 +29,7 @@ type Props = {
 const Component = ({
   className,
   isOpen,
-  isDopagaki,
+  isDopamine,
   combo,
   handleClick,
 }: Props): JSX.Element => (
@@ -43,7 +43,7 @@ const Component = ({
     >
       <MenuCard
         onClick={handleClick}
-        variant={isDopagaki ? "gradient" : "solid"}
+        variant={isDopamine ? "gradient" : "solid"}
       />
     </div>
     <div className={clsx("circle", isOpen && "animate")}>
@@ -205,7 +205,7 @@ const StyledComponent = styled(Component)`
 export const Menu = (props: ContainerProps): JSX.Element => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [combo, setCombo] = useState<number>(0);
-  const { isDopagaki, enable } = useDopagakiMode();
+  const { isDopamine, enable } = useDopamineMode();
   const lastClickedAtRef = useRef<number>(0);
   const comboResetTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -213,7 +213,7 @@ export const Menu = (props: ContainerProps): JSX.Element => {
 
   const handleClick = useCallback(() => {
     setIsOpen((prev) => !prev);
-    if (isDopagaki) return;
+    if (isDopamine) return;
 
     // ページ遷移でこのコンポーネントがアンマウントされるので、回数も自然にリセットされる
     const now = Date.now();
@@ -232,13 +232,13 @@ export const Menu = (props: ContainerProps): JSX.Element => {
       () => setCombo(0),
       COMBO_INTERVAL_MS
     );
-  }, [combo, isDopagaki, enable]);
+  }, [combo, isDopamine, enable]);
 
   return (
     <StyledComponent
       {...props}
       isOpen={isOpen}
-      isDopagaki={isDopagaki}
+      isDopamine={isDopamine}
       combo={combo}
       handleClick={handleClick}
     />
