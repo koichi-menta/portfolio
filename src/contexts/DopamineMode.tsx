@@ -48,11 +48,14 @@ const DopamineGlobalStyle = createGlobalStyle`
   }
 `;
 
+// 発動演出の重なり順。トップのロゴはこれより前面に出して、虹色の上に残す
+export const DOPAMINE_BURST_Z_INDEX = 50;
+
 // 発動の瞬間、画面中央のロゴから虹色が広がって画面を染め、溶けるように新しい背景が現れる
 const RainbowBurst = styled.div`
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: ${DOPAMINE_BURST_Z_INDEX};
   pointer-events: none;
   background: conic-gradient(
     red,
