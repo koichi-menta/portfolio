@@ -5,6 +5,8 @@ import { TbBrandGithub, TbBrandTwitter } from "react-icons/tb";
 import { Title } from "src/components/parts/Title";
 import { ProfileImage } from "src/components/parts/ProfileImage";
 import { colors } from "src/constants/colors";
+import { ProfileMV } from "src/components/blocks/ProfileMV";
+import { useDopamineMode } from "src/contexts/DopamineMode";
 
 export type ContainerProps = {};
 type Props = {
@@ -99,5 +101,7 @@ const StyledComponent = styled(Component)`
 `;
 
 export const ProfileContainer = (props: ContainerProps): JSX.Element => {
+  const { isDopamine } = useDopamineMode();
+  if (isDopamine) return <ProfileMV />;
   return <StyledComponent {...props} />;
 };

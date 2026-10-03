@@ -224,3 +224,24 @@ export const playRewind = (seconds: number): void => {
   osc.stop(now + seconds);
   lfo.stop(now + seconds);
 };
+
+// MV のベースライン: 短く切ったノコギリ波を低域だけ通す
+export const playBass = (frequency: number): void => {
+  const nodes = getNodes();
+  if (!nodes) return;
+  const { ctx, out } = nodes;
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  osc.type = "sawtooth";
+  osc.frequency.value = frequency;
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.setValueAtTime(900, now);
+  filter.frequency.exponentialRampToValueAtTime(200, now + 0.3);
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.35, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+  osc.connect(filter).connect(gain).connect(out);
+  osc.start(now);
+  osc.stop(now + 0.35);
+};
