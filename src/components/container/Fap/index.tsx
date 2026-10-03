@@ -3,6 +3,8 @@ import styled from "styled-components";
 import { Title } from "src/components/parts/Title";
 import { FaqItem } from "src/components/blocks/FaqItem";
 import faqData from "src/faq.json";
+import { FaqShorts } from "src/components/blocks/FaqShorts";
+import { useDopamineMode } from "src/contexts/DopamineMode";
 
 export type ContainerProps = {};
 type Props = {
@@ -42,5 +44,7 @@ const StyledComponent = styled(Component)`
 `;
 
 export const FaqContainer = (props: ContainerProps): JSX.Element => {
+  const { isDopamine } = useDopamineMode();
+  if (isDopamine) return <FaqShorts />;
   return <StyledComponent {...props} />;
 };

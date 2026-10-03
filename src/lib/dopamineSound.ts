@@ -159,3 +159,38 @@ export const playReveal = (): void => {
     osc.stop(now + 0.6);
   });
 };
+
+// 「質問きてた！」が飛び出すときのポップ音
+export const playPop = (): void => {
+  const nodes = getNodes();
+  if (!nodes) return;
+  const { ctx, out } = nodes;
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(400, now);
+  osc.frequency.exponentialRampToValueAtTime(1200, now + 0.08);
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.4, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+  osc.connect(gain).connect(out);
+  osc.start(now);
+  osc.stop(now + 0.15);
+};
+
+// 文字送りの小さな「ピッ」
+export const playTick = (): void => {
+  const nodes = getNodes();
+  if (!nodes) return;
+  const { ctx, out } = nodes;
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  osc.type = "square";
+  osc.frequency.value = 1800 + Math.random() * 400;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.04, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+  osc.connect(gain).connect(out);
+  osc.start(now);
+  osc.stop(now + 0.03);
+};
