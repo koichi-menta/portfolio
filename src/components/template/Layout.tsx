@@ -2,12 +2,17 @@ import React, { ReactNode } from "react";
 import styled from "styled-components";
 import { Header } from "src/components/blocks/Header";
 import Link from "next/link";
+import {
+  DOPAMINE_CONTROLS_SAFE_AREA,
+  useDopamineMode,
+} from "src/contexts/DopamineMode";
 
 export type ContainerProps = {
   children: ReactNode;
 };
 type Props = {
   className?: string;
+  isDopamine: boolean;
 } & ContainerProps;
 
 const Component = ({ className, children }: Props): JSX.Element => (
@@ -45,9 +50,12 @@ const StyledComponent = styled(Component)`
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 16px 0 8px;
+    padding-top: 16px;
     text-align: center;
     font-size: 12px;
+    /* ドーパミンモード中は画面下に操作ボタンが常に出るので、その分フッターを持ち上げる */
+    padding-bottom: ${({ isDopamine }) =>
+      isDopamine ? DOPAMINE_CONTROLS_SAFE_AREA : 8}px;
     > .link {
       color: #444;
       text-decoration: underline;
@@ -61,5 +69,6 @@ const StyledComponent = styled(Component)`
 `;
 
 export const Layout = (props: ContainerProps): JSX.Element => {
-  return <StyledComponent {...props} />;
+  const { isDopamine } = useDopamineMode();
+  return <StyledComponent {...props} isDopamine={isDopamine} />;
 };

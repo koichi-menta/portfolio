@@ -2,18 +2,21 @@ import React from "react";
 import styled from "styled-components";
 import { Title } from "src/components/parts/Title";
 import { DevelopWorkSection } from "src/components/blocks/DevelopWorkSection";
+import { WorksGacha } from "src/components/blocks/WorksGacha";
+import { useDopamineMode } from "src/contexts/DopamineMode";
 
 export type ContainerProps = {};
 type Props = {
   className?: string;
+  isDopamine: boolean;
 } & ContainerProps;
 
-const Component = ({ className }: Props): JSX.Element => (
+const Component = ({ className, isDopamine }: Props): JSX.Element => (
   <div className={className}>
     <div className="title">
       <Title>Works</Title>
     </div>
-    <DevelopWorkSection />
+    {isDopamine ? <WorksGacha /> : <DevelopWorkSection />}
   </div>
 );
 
@@ -30,5 +33,6 @@ const StyledComponent = styled(Component)`
 `;
 
 export const WorksContainer = (props: ContainerProps): JSX.Element => {
-  return <StyledComponent {...props} />;
+  const { isDopamine } = useDopamineMode();
+  return <StyledComponent {...props} isDopamine={isDopamine} />;
 };

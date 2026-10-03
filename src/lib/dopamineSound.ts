@@ -104,3 +104,58 @@ export const playBurst = (): void => {
     osc.stop(start + 0.5);
   });
 };
+
+// ガチャの溜め: うなりながら音程が上がっていく
+export const playCharge = (seconds: number): void => {
+  const nodes = getNodes();
+  if (!nodes) return;
+  const { ctx, out } = nodes;
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  osc.type = "sawtooth";
+  osc.frequency.setValueAtTime(110, now);
+  osc.frequency.exponentialRampToValueAtTime(880, now + seconds);
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.setValueAtTime(400, now);
+  filter.frequency.exponentialRampToValueAtTime(5000, now + seconds);
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.001, now);
+  gain.gain.exponentialRampToValueAtTime(0.25, now + seconds * 0.9);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + seconds);
+  osc.connect(filter).connect(gain).connect(out);
+  osc.start(now);
+  osc.stop(now + seconds);
+};
+
+// 1枚登場するたびの「ドン！キラーン」
+export const playReveal = (): void => {
+  const nodes = getNodes();
+  if (!nodes) return;
+  const { ctx, out } = nodes;
+  const now = ctx.currentTime;
+  playKick();
+
+  const shimmer = ctx.createBufferSource();
+  shimmer.buffer = noiseBuffer(ctx, 0.4);
+  const filter = ctx.createBiquadFilter();
+  filter.type = "highpass";
+  filter.frequency.value = 6000;
+  const shimmerGain = ctx.createGain();
+  shimmerGain.gain.setValueAtTime(0.3, now);
+  shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+  shimmer.connect(filter).connect(shimmerGain).connect(out);
+  shimmer.start(now);
+
+  [1046.5, 1318.5, 1568, 2093].forEach((freq) => {
+    const osc = ctx.createOscillator();
+    osc.type = "triangle";
+    osc.frequency.value = freq;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+    osc.connect(gain).connect(out);
+    osc.start(now);
+    osc.stop(now + 0.6);
+  });
+};
