@@ -15,6 +15,7 @@ import {
   motion,
   useMotionValue,
   useReducedMotion,
+  useTransform,
 } from "framer-motion";
 import { TbFlag, TbPlayerTrackPrev, TbX } from "react-icons/tb";
 import timelineData from "src/timeline.json";
@@ -82,7 +83,8 @@ const pointOnPolyline = (points: Point[], progress: number): Point => {
 
 // 光る山道は頂上から下へ向かって描く
 const LIT_TRAIL = [SUMMIT, ...[...EVENT_POINTS].reverse(), FOOT];
-const REWIND_ROUTE = [...EVENT_POINTS].reverse();
+// 巻き戻しは山頂の NOW から山道を下ってふもとの一番古い出来事へ
+const REWIND_ROUTE = [NOW_POINT, SUMMIT, ...[...EVENT_POINTS].reverse()];
 const toPathD = (points: Point[]): string =>
   points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x} ${p.y}`).join(" ");
 
@@ -97,9 +99,6 @@ const formatTime = (date: Date): string =>
   `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 
 const oldestTime = parseDate(timelineData[0].date).getTime();
-const newestTime = parseDate(
-  timelineData[timelineData.length - 1].date,
-).getTime();
 
 type Size = { width: number; height: number };
 
@@ -125,7 +124,7 @@ const Component = ({ className }: Props): JSX.Element => {
   );
   const { step, isPlaying, isDone, start, skip } = useTimedSequence(durations);
   const [now, setNow] = useState<Date>(() => new Date());
-  const [displayTime, setDisplayTime] = useState<number>(newestTime);
+  const [displayTime, setDisplayTime] = useState<number>(() => Date.now());
   const [isRewindMoving, setIsRewindMoving] = useState<boolean>(false);
   // 終わった後にスクロールやタップで寄る場所
   const [browseStop, setBrowseStop] = useState<number>(NOW_STOP);
@@ -139,6 +138,8 @@ const Component = ({ className }: Props): JSX.Element => {
   const cameraY = useMotionValue(0);
   const cameraScale = useMotionValue(1);
   const litLength = useMotionValue(0);
+  // 長さ0でも線の丸い端が点として残るので、光り始めるまでは隠す
+  const litOpacity = useTransform(litLength, (v) => (v > 0.001 ? 1 : 0));
 
   // 紹介中は step 1 がふもと（配列の先頭）、最後の step が頂上の NOW
   const currentStop = isDone ? browseStop : step >= 1 ? step - 1 : -1;
@@ -230,20 +231,21 @@ const Component = ({ className }: Props): JSX.Element => {
     if (isDone) goToStop(NOW_STOP);
   }, [isDone, goToStop]);
 
-  // 巻き戻し: 最新の出来事のアップから、山道を下ってふもとの一番古い出来事へ
+  // 巻き戻し: 山頂の NOW のアップから、山道を下ってふもとの一番古い出来事へ
   useEffect(() => {
     if (step !== 0 || size.width === 0) return;
-    const newestPoint = EVENT_POINTS[EVENT_POINTS.length - 1];
-    const startCamera = cameraFor(newestPoint, closeUpScale, 0.5);
+    const startCamera = cameraFor(NOW_POINT, closeUpScale, 0.5);
     cameraX.set(startCamera.x);
     cameraY.set(startCamera.y);
     cameraScale.set(startCamera.scale);
     litLength.set(0);
-    setDisplayTime(newestTime);
+    const startTime = Date.now();
+    setDisplayTime(startTime);
     setIsRewindMoving(false);
 
     const totalLit = polylineLength(LIT_TRAIL);
-    const summitToNewest = distance(SUMMIT, newestPoint);
+    // 旗から山頂までは山道ではないので、光る道はその先から数える
+    const flagToSummit = distance(NOW_POINT, SUMMIT);
     const routeLength = polylineLength(REWIND_ROUTE);
     let controls: ReturnType<typeof animate> | undefined;
 
@@ -262,8 +264,10 @@ const Component = ({ className }: Props): JSX.Element => {
           cameraX.set(camera.x);
           cameraY.set(camera.y);
           cameraScale.set(camera.scale);
-          litLength.set((summitToNewest + routeLength * progress) / totalLit);
-          setDisplayTime(newestTime - (newestTime - oldestTime) * progress);
+          litLength.set(
+            Math.max(0, routeLength * progress - flagToSummit) / totalLit,
+          );
+          setDisplayTime(startTime - (startTime - oldestTime) * progress);
         },
       });
     }, REWIND_HOLD_MS);
@@ -279,18 +283,26 @@ const Component = ({ className }: Props): JSX.Element => {
   // 紹介中も終わった後も、注目する場所が変わったらそこへ寄る
   useEffect(() => {
     if (currentStop < 0 || size.width === 0) return;
+    moveCamera(STOP_POINTS[currentStop], closeUpScale, closeUpAnchor);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStop, size]);
+
+  // 注目する場所が変わった時の音と日付。
+  // 「デン！」は最初のアニメーションで NOW にたどり着いた時だけ。見て回る時はどこでも同じ音
+  useEffect(() => {
+    if (currentStop < 0) return;
     setIsRewindMoving(false);
     if (currentStop === NOW_STOP) {
       animate(litLength, 1, { duration: 0.4 });
       setDisplayTime(Date.now());
-      if (!isMuted) playReveal();
     } else {
       setDisplayTime(parseDate(timelineData[currentStop].date).getTime());
-      if (!isMuted) playPop();
     }
-    moveCamera(STOP_POINTS[currentStop], closeUpScale, closeUpAnchor);
+    if (isMuted) return;
+    if (currentStop === NOW_STOP && isPlaying) playReveal();
+    else playPop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStop, size]);
+  }, [currentStop]);
 
   // 終わった後の見て回る操作: ホイール・スワイプ・矢印キー
   useEffect(() => {
@@ -402,7 +414,7 @@ const Component = ({ className }: Props): JSX.Element => {
                 d={toPathD(LIT_TRAIL)}
                 className="trailLit"
                 fill="none"
-                style={{ pathLength: litLength }}
+                style={{ pathLength: litLength, opacity: litOpacity }}
               />
             </svg>
 
