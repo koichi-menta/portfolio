@@ -26,23 +26,24 @@ import {
   useDopamineMode,
 } from "src/contexts/DopamineMode";
 import { useTimedSequence } from "src/hooks/useTimedSequence";
-import { playPop, playRewind, unlock } from "src/lib/dopamineSound";
+import { playPop, playReveal, playRewind, unlock } from "src/lib/dopamineSound";
 
 // 最新の出来事のアップで一拍置いてから、山道を下って過去へ戻る
 const REWIND_HOLD_MS = 500;
 const REWIND_MOVE_MS = 2200;
 const INTRO_MS = 1000;
+const NOW_MS = 1500;
+// ホイール1回の操作で何か所も飛ばないよう、移動後しばらく入力を無視する
+const NAVIGATION_LOCK_MS = 700;
+const SWIPE_THRESHOLD_PX = 50;
 
 // 山の絵の座標系。頂上が最新、ふもとが一番過去
 const WORLD_WIDTH = 1000;
 // ふもとをアップにしても絵が途切れないよう、山すそを下まで伸ばしておく
 const WORLD_HEIGHT = 1700;
 const SUMMIT = { x: 500, y: 200 };
-// 全体表示で収める範囲（NOW の旗からふもとまで）
-const FIT_TOP = 40;
-const FIT_BOTTOM = 1400;
-// 全体表示のとき、画面下の「もう一度見る」と重ならないよう空けておく高さ
-const HUD_RESERVE = 140;
+// 最後に NOW を映すときの注目点（旗のあたり）
+const NOW_POINT = { x: 500, y: 90 };
 const FOOT = { x: 500, y: 1350 };
 // 古い順に、ふもとから頂上へ向かう山道の曲がり角に置く
 const EVENT_POINTS = [
@@ -107,6 +108,10 @@ type Props = {
   className?: string;
 } & ContainerProps;
 
+// 寄って見られる場所。古い順の出来事のあとに、頂上の NOW
+const STOP_POINTS = [...EVENT_POINTS, NOW_POINT];
+const NOW_STOP = STOP_POINTS.length - 1;
+
 const Component = ({ className }: Props): JSX.Element => {
   const { isMuted } = useDopamineMode();
   const shouldReduceMotion = useReducedMotion();
@@ -114,6 +119,7 @@ const Component = ({ className }: Props): JSX.Element => {
     () => [
       REWIND_HOLD_MS + REWIND_MOVE_MS,
       ...timelineData.map(() => INTRO_MS),
+      NOW_MS,
     ],
     [],
   );
@@ -121,21 +127,28 @@ const Component = ({ className }: Props): JSX.Element => {
   const [now, setNow] = useState<Date>(() => new Date());
   const [displayTime, setDisplayTime] = useState<number>(newestTime);
   const [isRewindMoving, setIsRewindMoving] = useState<boolean>(false);
-  // 終わった後に出来事をタップしてアップで見る
-  const [selected, setSelected] = useState<number | null>(null);
+  // 終わった後にスクロールやタップで寄る場所
+  const [browseStop, setBrowseStop] = useState<number>(NOW_STOP);
   const [size, setSize] = useState<Size>({ width: 0, height: 0 });
   const viewportRef = useRef<HTMLDivElement>(null);
+  const browseStopRef = useRef<number>(NOW_STOP);
+  const lockedUntilRef = useRef<number>(0);
+  const touchStartYRef = useRef<number | null>(null);
 
   const cameraX = useMotionValue(0);
   const cameraY = useMotionValue(0);
   const cameraScale = useMotionValue(1);
   const litLength = useMotionValue(0);
 
-  // 古い順に紹介するので、step 1 が配列の先頭（ふもと）
-  const introducedIndex = step >= 1 && isPlaying ? step - 1 : -1;
-  const focusedIndex = isDone ? selected : introducedIndex;
+  // 紹介中は step 1 がふもと（配列の先頭）、最後の step が頂上の NOW
+  const currentStop = isDone ? browseStop : step >= 1 ? step - 1 : -1;
   const isLit = (i: number): boolean =>
-    isDone || (introducedIndex >= 0 && i <= introducedIndex);
+    isDone || (currentStop >= 0 && i <= currentStop);
+  const focusedEvent =
+    currentStop >= 0 && currentStop < NOW_STOP
+      ? timelineData[currentStop]
+      : null;
+  const isNowFocused = currentStop === NOW_STOP;
 
   useEffect(() => {
     const el = viewportRef.current;
@@ -151,12 +164,9 @@ const Component = ({ className }: Props): JSX.Element => {
   }, []);
 
   const closeUpScale = Math.min(size.width, size.height) / 360;
-  const fitAreaHeight = Math.max(size.height - HUD_RESERVE, 0);
-  const fitScale =
-    Math.min(size.width / WORLD_WIDTH, fitAreaHeight / (FIT_BOTTOM - FIT_TOP)) *
-    0.92;
+  // アップのときは下に説明カードを出すので、注目点を画面の少し上に寄せる
+  const closeUpAnchor = 0.3;
 
-  // 指定した山の上の点を、画面の (anchorX, anchorY) の割合の位置に映す
   const cameraFor = useCallback(
     (point: Point, scale: number, anchorY: number) => ({
       x: size.width / 2 - point.x * scale,
@@ -179,14 +189,31 @@ const Component = ({ className }: Props): JSX.Element => {
     [cameraFor, cameraX, cameraY, cameraScale, shouldReduceMotion],
   );
 
-  // アップのときは下に説明カードを出すので、出来事を画面の少し上に寄せる
-  const closeUpAnchor = 0.34;
+  const goToStop = useCallback((index: number) => {
+    const clamped = Math.max(0, Math.min(NOW_STOP, index));
+    browseStopRef.current = clamped;
+    setBrowseStop(clamped);
+  }, []);
+
+  // スクロールの向きと山の上下を合わせる: 下へ = ふもと（過去）へ、上へ = 頂上（現在）へ
+  const browse = useCallback(
+    (direction: 1 | -1) => {
+      const now = Date.now();
+      if (now < lockedUntilRef.current) return;
+      const next = browseStopRef.current - direction;
+      if (next < 0 || next > NOW_STOP) return;
+      lockedUntilRef.current = now + NAVIGATION_LOCK_MS;
+      goToStop(next);
+    },
+    [goToStop],
+  );
 
   const replay = useCallback(() => {
     unlock();
-    setSelected(null);
+    // 終わった瞬間に前回見ていた場所へ一瞬寄らないよう、NOW に戻しておく
+    goToStop(NOW_STOP);
     start();
-  }, [start]);
+  }, [goToStop, start]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -197,6 +224,11 @@ const Component = ({ className }: Props): JSX.Element => {
   useEffect(() => {
     if (size.width > 0 && step === -1) start();
   }, [size.width, step, start]);
+
+  // 終わったら頂上の NOW のアップのまま、そこからスクロールで見て回れるようにする
+  useEffect(() => {
+    if (isDone) goToStop(NOW_STOP);
+  }, [isDone, goToStop]);
 
   // 巻き戻し: 最新の出来事のアップから、山道を下ってふもとの一番古い出来事へ
   useEffect(() => {
@@ -244,37 +276,55 @@ const Component = ({ className }: Props): JSX.Element => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, size.width]);
 
-  // 紹介: 一番古い出来事から頂上へ向かって、1つずつアップにする
+  // 紹介中も終わった後も、注目する場所が変わったらそこへ寄る
   useEffect(() => {
-    if (introducedIndex < 0) return;
-    if (!isMuted) playPop();
+    if (currentStop < 0 || size.width === 0) return;
     setIsRewindMoving(false);
-    setDisplayTime(parseDate(timelineData[introducedIndex].date).getTime());
-    moveCamera(EVENT_POINTS[introducedIndex], closeUpScale, closeUpAnchor);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [introducedIndex]);
-
-  // 終わったら山全体を見せる。出来事をタップしたらそこへ寄る
-  useEffect(() => {
-    if (!isDone || size.width === 0) return;
-    animate(litLength, 1, { duration: 0.3 });
-    if (selected === null) {
-      moveCamera(
-        { x: WORLD_WIDTH / 2, y: (FIT_TOP + FIT_BOTTOM) / 2 },
-        fitScale,
-        fitAreaHeight / 2 / size.height,
-      );
+    if (currentStop === NOW_STOP) {
+      animate(litLength, 1, { duration: 0.4 });
+      setDisplayTime(Date.now());
+      if (!isMuted) playReveal();
     } else {
-      moveCamera(EVENT_POINTS[selected], closeUpScale, closeUpAnchor);
+      setDisplayTime(parseDate(timelineData[currentStop].date).getTime());
+      if (!isMuted) playPop();
     }
+    moveCamera(STOP_POINTS[currentStop], closeUpScale, closeUpAnchor);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDone, selected, size]);
+  }, [currentStop, size]);
 
-  const focused =
-    focusedIndex !== null && focusedIndex >= 0
-      ? timelineData[focusedIndex]
-      : null;
-  const isRewinding = step === 0;
+  // 終わった後の見て回る操作: ホイール・スワイプ・矢印キー
+  useEffect(() => {
+    if (!isDone) return;
+    const viewport = viewportRef.current;
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (Math.abs(e.deltaY) < 10) return;
+      browse(e.deltaY > 0 ? 1 : -1);
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowDown") browse(1);
+      if (e.key === "ArrowUp") browse(-1);
+    };
+    // ページ自体がスクロールしないよう preventDefault するため、passive: false で登録する
+    viewport?.addEventListener("wheel", handleWheel, { passive: false });
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      viewport?.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isDone, browse]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartYRef.current = e.touches[0].clientY;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!isDone || touchStartYRef.current === null) return;
+    // 指を上へ払う = 下へスクロール
+    const deltaY = touchStartYRef.current - e.changedTouches[0].clientY;
+    touchStartYRef.current = null;
+    if (Math.abs(deltaY) < SWIPE_THRESHOLD_PX) return;
+    browse(deltaY > 0 ? 1 : -1);
+  };
 
   return (
     <MotionConfig reducedMotion="user">
@@ -285,7 +335,9 @@ const Component = ({ className }: Props): JSX.Element => {
           </Link>
           <p className={clsx("clock", isRewindMoving && "rewinding")}>
             {isRewindMoving && <TbPlayerTrackPrev className="rewindIcon" />}
-            {isPlaying ? formatDate(new Date(displayTime)) : formatDate(now)}
+            {isPlaying && !isNowFocused
+              ? formatDate(new Date(displayTime))
+              : formatDate(now)}
           </p>
           {isPlaying ? (
             <button type="button" className="skip" onClick={skip}>
@@ -300,7 +352,8 @@ const Component = ({ className }: Props): JSX.Element => {
         <div
           className="viewport"
           ref={viewportRef}
-          onClick={() => isDone && setSelected(null)}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
         >
           <motion.div
             className="world"
@@ -354,13 +407,15 @@ const Component = ({ className }: Props): JSX.Element => {
             </svg>
 
             {/* 雪の頂（y=150）より上に旗を立てる */}
-            <div className="summit" style={{ left: SUMMIT.x, top: 130 }}>
+            <button
+              type="button"
+              className={clsx("summit", isNowFocused && "focused")}
+              style={{ left: SUMMIT.x, top: 130 }}
+              onClick={() => isDone && goToStop(NOW_STOP)}
+            >
               <TbFlag className="flag" />
-              <p className="nowLabel">NOW</p>
-              <p className="nowTime">
-                {formatDate(now)} {formatTime(now)}
-              </p>
-            </div>
+              <span className="nowLabel">NOW</span>
+            </button>
 
             {timelineData.map((event, i) => (
               <button
@@ -369,57 +424,80 @@ const Component = ({ className }: Props): JSX.Element => {
                 className={clsx(
                   "node",
                   isLit(i) && "lit",
-                  i === focusedIndex && "focused",
+                  i === currentStop && "focused",
                 )}
                 style={{ left: EVENT_POINTS[i].x, top: EVENT_POINTS[i].y }}
                 aria-label={event.title}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isDone) setSelected(i);
-                }}
+                onClick={() => isDone && goToStop(i)}
               >
                 <GenreIcon genre={event.genre} />
                 <span className="nodeDate">{event.date}</span>
               </button>
             ))}
           </motion.div>
+
+          {isDone && (
+            <div className="stops" aria-hidden>
+              {/* 上が頂上（現在）、下がふもと（過去） */}
+              {STOP_POINTS.map((_, i) => NOW_STOP - i).map((stop) => (
+                <span
+                  key={stop}
+                  className={clsx("dot", stop === browseStop && "active")}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="hud">
           <AnimatePresence mode="wait">
-            {focused && (
+            {focusedEvent && (
               <motion.div
-                key={focused.title}
+                key={focusedEvent.title}
                 className="card"
                 initial={{ y: 40, opacity: 0, scale: 0.9 }}
                 animate={{ y: 0, opacity: 1, scale: 1 }}
                 exit={{ y: -20, opacity: 0, transition: { duration: 0.12 } }}
                 transition={{ type: "spring", stiffness: 400, damping: 26 }}
-                onClick={(e: React.MouseEvent) => e.stopPropagation()}
               >
-                <p className="date">{focused.date}</p>
-                <p className="title">{focused.title}</p>
-                <p className="description">{focused.description}</p>
+                <p className="date">{focusedEvent.date}</p>
+                <p className="title">{focusedEvent.title}</p>
+                <p className="description">{focusedEvent.description}</p>
               </motion.div>
             )}
-            {isDone && selected === null && (
+            {isNowFocused && (
               <motion.div
-                key="replay"
-                className="ending"
-                initial={{ scale: 0.6, opacity: 0 }}
+                key="now"
+                className="card nowCard"
+                initial={{ scale: 0.4, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
+                exit={{ y: -20, opacity: 0, transition: { duration: 0.12 } }}
+                transition={{ type: "spring", stiffness: 400, damping: 18 }}
               >
-                <p className="hint">出来事をタップでアップ</p>
-                <DopamineButton onClick={replay}>もう一度見る</DopamineButton>
+                <p className="hello">Hello World</p>
+                <p className="date">
+                  NOW {formatDate(now)} {formatTime(now)}
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
+          {isDone && (
+            <motion.div
+              className="ending"
+              initial={{ y: 10, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+            >
+              <p className="hint">スクロール・スワイプで山を上り下り</p>
+              <DopamineButton onClick={replay}>もう一度見る</DopamineButton>
+            </motion.div>
+          )}
         </div>
       </div>
     </MotionConfig>
   );
 };
 
+const rainbow = `red, orange, yellow, lime, cyan, blue, magenta, red`;
 const DISPLAY_HEIGHT = 64;
 
 const StyledComponent = styled(Component)`
@@ -523,21 +601,43 @@ const StyledComponent = styled(Component)`
     display: flex;
     flex-direction: column;
     align-items: center;
-    text-align: center;
+    padding: 0;
+    border: none;
+    background: none;
+    color: #7fdcff;
+    cursor: pointer;
     > .flag {
       font-size: 64px;
-      color: #7fdcff;
       filter: drop-shadow(0 0 10px rgba(127, 220, 255, 0.9));
     }
     > .nowLabel {
       font-size: 40px;
       font-weight: 900;
-      color: #7fdcff;
     }
-    > .nowTime {
-      font-family: "Courier New", monospace;
-      font-size: 26px;
-      white-space: nowrap;
+    &.focused > .flag {
+      filter: drop-shadow(0 0 24px rgba(255, 106, 213, 1));
+    }
+  }
+
+  .stops {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    translate: 0 -50%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    > .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transition: 0.3s;
+      &.active {
+        height: 18px;
+        border-radius: 3px;
+        background: #ff6ad5;
+      }
     }
   }
 
@@ -586,7 +686,9 @@ const StyledComponent = styled(Component)`
     bottom: ${DOPAMINE_CONTROLS_SAFE_AREA + 8}px;
     z-index: 2;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
     padding: 0 16px;
     pointer-events: none;
     > * {
@@ -618,6 +720,17 @@ const StyledComponent = styled(Component)`
         font-size: 14px;
         line-height: 1.6;
         opacity: 0.85;
+      }
+    }
+    .nowCard {
+      text-align: center;
+      > .hello {
+        font-size: 34px;
+        font-weight: 900;
+        background: linear-gradient(90deg, ${rainbow});
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
       }
     }
     .ending {
