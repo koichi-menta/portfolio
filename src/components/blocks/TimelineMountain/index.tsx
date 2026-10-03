@@ -110,6 +110,18 @@ type Props = {
 // 寄って見られる場所。古い順の出来事のあとに、頂上の NOW
 const STOP_POINTS = [...EVENT_POINTS, NOW_POINT];
 const NOW_STOP = STOP_POINTS.length - 1;
+// 見て回るとき、NOW の上と一番古い出来事の下は山全体の俯瞰
+const OVERVIEW_TOP = NOW_STOP + 1;
+const OVERVIEW_BOTTOM = -1;
+const BROWSE_POSITIONS = Array.from(
+  { length: OVERVIEW_TOP - OVERVIEW_BOTTOM + 1 },
+  (_, i) => OVERVIEW_TOP - i,
+);
+// 俯瞰で収める範囲（NOW の旗からふもとまで）
+const FIT_TOP = 20;
+const FIT_BOTTOM = 1380;
+// 俯瞰のとき、画面下のヒントと「もう一度見る」と重ならないよう空けておく高さ
+const HUD_RESERVE = 120;
 
 const Component = ({ className }: Props): JSX.Element => {
   const { isMuted } = useDopamineMode();
@@ -143,6 +155,8 @@ const Component = ({ className }: Props): JSX.Element => {
 
   // 紹介中は step 1 がふもと（配列の先頭）、最後の step が頂上の NOW
   const currentStop = isDone ? browseStop : step >= 1 ? step - 1 : -1;
+  const isOverview =
+    isDone && (browseStop === OVERVIEW_TOP || browseStop === OVERVIEW_BOTTOM);
   const isLit = (i: number): boolean =>
     isDone || (currentStop >= 0 && i <= currentStop);
   const focusedEvent =
@@ -191,7 +205,7 @@ const Component = ({ className }: Props): JSX.Element => {
   );
 
   const goToStop = useCallback((index: number) => {
-    const clamped = Math.max(0, Math.min(NOW_STOP, index));
+    const clamped = Math.max(OVERVIEW_BOTTOM, Math.min(OVERVIEW_TOP, index));
     browseStopRef.current = clamped;
     setBrowseStop(clamped);
   }, []);
@@ -202,7 +216,7 @@ const Component = ({ className }: Props): JSX.Element => {
       const now = Date.now();
       if (now < lockedUntilRef.current) return;
       const next = browseStopRef.current - direction;
-      if (next < 0 || next > NOW_STOP) return;
+      if (next < OVERVIEW_BOTTOM || next > OVERVIEW_TOP) return;
       lockedUntilRef.current = now + NAVIGATION_LOCK_MS;
       goToStop(next);
     },
@@ -282,14 +296,33 @@ const Component = ({ className }: Props): JSX.Element => {
 
   // 紹介中も終わった後も、注目する場所が変わったらそこへ寄る
   useEffect(() => {
-    if (currentStop < 0 || size.width === 0) return;
+    if (size.width === 0) return;
+    if (isOverview) {
+      const fitAreaHeight = Math.max(size.height - HUD_RESERVE, 0);
+      const fitScale =
+        Math.min(
+          size.width / WORLD_WIDTH,
+          fitAreaHeight / (FIT_BOTTOM - FIT_TOP),
+        ) * 0.92;
+      moveCamera(
+        { x: WORLD_WIDTH / 2, y: (FIT_TOP + FIT_BOTTOM) / 2 },
+        fitScale,
+        fitAreaHeight / 2 / size.height,
+      );
+      return;
+    }
+    if (currentStop < 0) return;
     moveCamera(STOP_POINTS[currentStop], closeUpScale, closeUpAnchor);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStop, size]);
+  }, [currentStop, isOverview, size]);
 
   // 注目する場所が変わった時の音と日付。
   // 「デン！」は最初のアニメーションで NOW にたどり着いた時だけ。見て回る時はどこでも同じ音
   useEffect(() => {
+    if (isOverview) {
+      if (!isMuted) playPop();
+      return;
+    }
     if (currentStop < 0) return;
     setIsRewindMoving(false);
     if (currentStop === NOW_STOP) {
@@ -451,10 +484,16 @@ const Component = ({ className }: Props): JSX.Element => {
           {isDone && (
             <div className="stops" aria-hidden>
               {/* 上が頂上（現在）、下がふもと（過去） */}
-              {STOP_POINTS.map((_, i) => NOW_STOP - i).map((stop) => (
+              {BROWSE_POSITIONS.map((position) => (
                 <span
-                  key={stop}
-                  className={clsx("dot", stop === browseStop && "active")}
+                  key={position}
+                  className={clsx(
+                    "dot",
+                    (position === OVERVIEW_TOP ||
+                      position === OVERVIEW_BOTTOM) &&
+                      "overview",
+                    position === browseStop && "active",
+                  )}
                 />
               ))}
             </div>
@@ -645,6 +684,11 @@ const StyledComponent = styled(Component)`
       border-radius: 50%;
       background: rgba(255, 255, 255, 0.3);
       transition: 0.3s;
+      /* 両端の俯瞰は中抜きの丸で区別する */
+      &.overview {
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        background: transparent;
+      }
       &.active {
         height: 18px;
         border-radius: 3px;
