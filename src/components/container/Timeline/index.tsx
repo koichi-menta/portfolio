@@ -5,6 +5,8 @@ import "react-vertical-timeline-component/style.min.css";
 import { TimelineItem } from "src/components/parts/TimelineItem";
 import timelineData from "src/timeline.json";
 import { Title } from "src/components/parts/Title";
+import { TimelineTimeMachine } from "src/components/blocks/TimelineTimeMachine";
+import { useDopamineMode } from "src/contexts/DopamineMode";
 
 export type ContainerProps = {};
 type Props = {
@@ -65,5 +67,7 @@ const StyledComponent = styled(Component)`
 `;
 
 export const TimelineContainer = (props: ContainerProps): JSX.Element => {
+  const { isDopamine } = useDopamineMode();
+  if (isDopamine) return <TimelineTimeMachine />;
   return <StyledComponent {...props} />;
 };

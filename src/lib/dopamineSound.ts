@@ -194,3 +194,33 @@ export const playTick = (): void => {
   osc.start(now);
   osc.stop(now + 0.03);
 };
+
+// タイムマシンの巻き戻し: キュルキュルと震えながら音程が下がっていく
+export const playRewind = (seconds: number): void => {
+  const nodes = getNodes();
+  if (!nodes) return;
+  const { ctx, out } = nodes;
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  osc.type = "sawtooth";
+  osc.frequency.setValueAtTime(1400, now);
+  osc.frequency.exponentialRampToValueAtTime(180, now + seconds);
+  const lfo = ctx.createOscillator();
+  lfo.frequency.value = 14;
+  const lfoDepth = ctx.createGain();
+  lfoDepth.gain.value = 120;
+  lfo.connect(lfoDepth).connect(osc.frequency);
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = 2500;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.001, now);
+  gain.gain.exponentialRampToValueAtTime(0.12, now + 0.1);
+  gain.gain.setValueAtTime(0.12, now + seconds - 0.15);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + seconds);
+  osc.connect(filter).connect(gain).connect(out);
+  osc.start(now);
+  lfo.start(now);
+  osc.stop(now + seconds);
+  lfo.stop(now + seconds);
+};
