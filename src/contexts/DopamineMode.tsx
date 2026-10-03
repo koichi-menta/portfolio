@@ -7,17 +7,23 @@ import React, {
   useState,
 } from "react";
 import styled, { createGlobalStyle } from "styled-components";
+import { TbVolume, TbVolumeOff } from "react-icons/tb";
+import { playBurst, unlock } from "src/lib/dopamineSound";
 
 type DopamineModeValue = {
   isDopamine: boolean;
+  isMuted: boolean;
   enable: () => void;
   disable: () => void;
+  toggleMute: () => void;
 };
 
 const DopamineModeContext = createContext<DopamineModeValue>({
   isDopamine: false,
+  isMuted: false,
   enable: () => {},
   disable: () => {},
+  toggleMute: () => {},
 });
 
 // ドーパミンモード中は背景をネオンカラーでうねらせる
@@ -91,33 +97,62 @@ const RainbowBurst = styled.div`
   }
 `;
 
-type BackToSanityButtonProps = {
+// 画面下に常に出す操作ボタンの帯の高さ。各ページのボタンはこの分だけ上に置いて重ならないようにする
+export const DOPAMINE_CONTROLS_SAFE_AREA = 72;
+
+type ControlsProps = {
   className?: string;
-  onClick: () => void;
+  isMuted: boolean;
+  onToggleMute: () => void;
+  onDisable: () => void;
 };
 
-const BackToSanityButtonComponent = ({
+const ControlsComponent = ({
   className,
-  onClick,
-}: BackToSanityButtonProps): JSX.Element => (
-  <button type="button" className={className} onClick={onClick}>
-    正気に戻る
-  </button>
+  isMuted,
+  onToggleMute,
+  onDisable,
+}: ControlsProps): JSX.Element => (
+  <div className={className}>
+    <button type="button" className="button" onClick={onDisable}>
+      正気に戻る
+    </button>
+    <button
+      type="button"
+      className="button mute"
+      onClick={onToggleMute}
+      aria-label={isMuted ? "音を出す" : "音を消す"}
+    >
+      {isMuted ? <TbVolumeOff size={16} /> : <TbVolume size={16} />}
+    </button>
+  </div>
 );
 
-const BackToSanityButton = styled(BackToSanityButtonComponent)`
+const Controls = styled(ControlsComponent)`
   position: fixed;
   bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 100;
-  padding: 8px 20px;
-  border: 2px solid #333;
-  border-radius: 999px;
-  background-color: #fffff8;
-  color: #333;
-  font-size: 12px;
-  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  > .button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    padding: 0 20px;
+    border: 2px solid #333;
+    border-radius: 999px;
+    background-color: #fffff8;
+    color: #333;
+    font-size: 12px;
+    cursor: pointer;
+    &.mute {
+      width: 36px;
+      padding: 0;
+    }
+  }
 `;
 
 type Props = {
@@ -127,13 +162,23 @@ type Props = {
 // 状態はメモリ上にのみ持つので、ページ遷移では維持されリロードで元に戻る
 export const DopamineModeProvider = ({ children }: Props): JSX.Element => {
   const [isDopamine, setIsDopamine] = useState<boolean>(false);
+  const [isMuted, setIsMuted] = useState<boolean>(false);
 
-  const enable = useCallback(() => setIsDopamine(true), []);
+  // クリックの中から呼ばれる前提。音声の再生許可もここで取る
+  const enable = useCallback(() => {
+    unlock();
+    if (!isMuted) playBurst();
+    setIsDopamine(true);
+  }, [isMuted]);
   const disable = useCallback(() => setIsDopamine(false), []);
+  const toggleMute = useCallback(() => {
+    unlock();
+    setIsMuted((prev) => !prev);
+  }, []);
 
   const value = useMemo(
-    () => ({ isDopamine, enable, disable }),
-    [isDopamine, enable, disable]
+    () => ({ isDopamine, isMuted, enable, disable, toggleMute }),
+    [isDopamine, isMuted, enable, disable, toggleMute],
   );
 
   return (
@@ -143,7 +188,11 @@ export const DopamineModeProvider = ({ children }: Props): JSX.Element => {
         <>
           <DopamineGlobalStyle />
           <RainbowBurst />
-          <BackToSanityButton onClick={disable} />
+          <Controls
+            isMuted={isMuted}
+            onToggleMute={toggleMute}
+            onDisable={disable}
+          />
         </>
       )}
     </DopamineModeContext.Provider>
