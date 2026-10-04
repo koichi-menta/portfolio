@@ -40,6 +40,7 @@ const assert=require('node:assert/strict');
    for(let i=1;i<4;i++) assert.ok(impacts[i].time-impacts[i-1].time>120 && impacts[i].time-impacts[i-1].time<250,'Sequential impacts');
   }
   await page.locator('section[data-phase="collection"]').waitFor();
+  assert.equal(await page.evaluate(()=>window.audioProof.notes.filter(n=>n.phase==='reveal' && n.frequency===85).length),muted?0:4,'Every SSR gets a dramatic sound cue');
   await page.keyboard.press('r');
   await page.locator('section[data-phase="intro"]').waitFor();
   await page.keyboard.press('Escape');

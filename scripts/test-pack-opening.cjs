@@ -44,13 +44,14 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
     assert.equal(await page.locator('dialog .close').getAttribute('href'),'/');
     assert.equal(await page.locator('.sceneControls,.stageTop,.packHeader,.openFallback,.autoControls,.skip,.reset').count(),0);
     assert.equal(await page.locator('dialog').evaluate(el => el.matches(':modal')),true);
+    if(await page.locator('.guarantee').count()) assert.equal(await page.locator('.guarantee').evaluate(el=>el.getBoundingClientRect().bottom===innerHeight),true,'SSR background continues behind the bottom button');
     assert.equal(await page.evaluate(() => document.body.style.position),'fixed');
     assert.equal(await page.locator('dialog').evaluate(el => {
       const r = el.getBoundingClientRect();
       const footer = el.querySelector('.bottomControls').getBoundingClientRect();
       const content = el.querySelector('.sceneContent').getBoundingClientRect();
       return r.width === innerWidth && r.height === innerHeight && r.x === 0 && r.y === 0
-        && footer.bottom <= innerHeight && content.bottom <= footer.top;
+        && footer.bottom <= innerHeight && content.bottom === innerHeight && parseFloat(getComputedStyle(el.querySelector('.sceneContent')).paddingBottom) >= innerHeight-footer.top;
     }),true,'Fullscreen scene and reserved bottom control area');
   }
   async function normal(page) {
@@ -76,6 +77,8 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   assert.equal(await page.locator('.swipeGuide').count(),1);
   await page.evaluate(() => {
     window.packEvents=[];
+    window.ssrEntrances=[];
+    document.addEventListener('animationstart',e=>{ if(e.animationName==='awardRays') window.ssrEntrances.push(document.querySelector('.heroCard h4')?.textContent); });
     new MutationObserver(() => {
       const phase = document.querySelector('section[data-phase]')?.dataset.phase;
       const title = phase === 'reveal' ? document.querySelector('.heroCard h4')?.textContent : phase === 'collection' ? 'collection' : null;
@@ -103,14 +106,18 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   assert.equal(await page.evaluate(()=>window.launchEnds.length),4,'Every launch finishes before reveal');
   assert.equal(await page.evaluate(()=>window.launchEnds.every(bottom=>bottom<0)),true,'Every card crosses the viewport top');
   await cleanUI(page);
+  await page.waitForTimeout(850);
+  assert.equal(await page.evaluate(()=>Array.from(document.querySelectorAll('.revealAtmosphere *, .revealScene *')).flatMap(el=>el.getAnimations()).every(animation=>{const timing=animation.effect.getTiming();return timing.iterations!==Infinity && Number(timing.delay)+Number(timing.duration)<=1900;})),true,'All SSR entrance effects finish inside two seconds');
+  await page.screenshot({path:path.join(out,'desktop-ssr-entrance.png')});
   await page.mouse.move(5,5);
   await phase(page,'collection');
   await cleanUI(page);
   const events = await page.evaluate(() => window.packEvents);
   assert.equal(events.length,5);
+  assert.equal(await page.evaluate(()=>new Set(window.ssrEntrances).size),4,'Every SSR replays its own full-screen entrance');
   assert.equal(new Set(events.slice(0,4).map(e=>e.title)).size,4);
-  for(let i=1;i<4;i++) assert.ok(events[i].time-events[i-1].time >=850 && events[i].time-events[i-1].time <1350);
-  assert.ok(events[4].time-events[3].time >=1000);
+  for(let i=1;i<4;i++) assert.ok(events[i].time-events[i-1].time >=1850 && events[i].time-events[i-1].time <2350);
+  assert.ok(events[4].time-events[3].time >=1850 && events[4].time-events[3].time <2350);
   assert.equal(await page.locator('.resultCard .workLink').count(),4);
   async function checkColumns(page, columns) {
     assert.equal(await page.locator('.resultCard').evaluateAll((cards, expected) => {
@@ -151,7 +158,7 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   await page.waitForTimeout(1400);
   assert.equal(await page.locator('.heroCard h4').innerText(),heldTitle,'Keyboard pause');
   await page.keyboard.press('p');
-  await page.waitForTimeout(1100);
+  await page.waitForTimeout(2100);
   assert.notEqual(await page.locator('.heroCard h4').innerText(),heldTitle);
   await page.keyboard.press('Escape');
   await normal(page);
@@ -179,6 +186,7 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   await phase(mobile.page,'reveal');
   await cleanUI(mobile.page);
+  await mobile.page.waitForTimeout(850);
   await mobile.page.screenshot({path:path.join(out,'mobile-reveal.png')});
   await phase(mobile.page,'collection');
   await cleanUI(mobile.page);
@@ -204,7 +212,7 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   await phase(reduced.page,'reveal');
   assert.equal(await reduced.page.locator('.flyingCards').count(),0);
   const first=await reduced.page.locator('.heroCard h4').innerText();
-  await reduced.page.waitForTimeout(1100);
+  await reduced.page.waitForTimeout(1500);
   assert.notEqual(await reduced.page.locator('.heroCard h4').innerText(),first);
   await reduced.page.goBack();
   assert.equal(await reduced.page.evaluate(()=>document.body.style.position),'');
@@ -229,5 +237,5 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   }
   await browser.close();
   assert.deepEqual(errors,[],'No runtime errors');
-  console.log(`PASS: top-left X returns to site top in all phases with mode preserved; desktop four-column cards; bottom normal-mode button, no header/fallback/skip/pause UI; full-screen collection; swipe guide, four upward cards, 1000ms automatic sequence, keyboard pack/pause/replay, touch cancel, link pause, Escape cleanup, reduced motion and Back. Screenshots: ${out}`);
+  console.log(`PASS: top-left X returns to site top in all phases with mode preserved; desktop four-column cards; bottom normal-mode button, no header/fallback/skip/pause UI; full-screen collection; swipe guide, four upward cards, staged SSR automatic sequence, keyboard pack/pause/replay, touch cancel, link pause, Escape cleanup, reduced motion and Back. Screenshots: ${out}`);
 })().catch(error=>{console.error(error);process.exit(1);});

@@ -144,14 +144,14 @@ const Component = ({ className }: Props): JSX.Element => {
   }, [phase, reduceMotion]);
 
   // A fresh timeout for each visible work prevents catch-up bursts after a pause.
-  // The last card gets its full second after the short entrance animation.
+  // Allow the anticipation, entrance and readable hold for every SSR.
   useEffect(() => {
     if (phase !== "reveal" || paused) return;
     autoTimer.current = window.setTimeout(() => {
       if (phaseRef.current !== "reveal") return;
       if (index < worksData.length - 1) setIndex(index + 1);
       else moveTo("collection");
-    }, index === worksData.length - 1 && !reduceMotion ? 1200 : 1000);
+    }, reduceMotion ? 1400 : 2000);
     return () => window.clearTimeout(autoTimer.current);
   }, [phase, index, paused, reduceMotion]);
 
@@ -172,9 +172,9 @@ const Component = ({ className }: Props): JSX.Element => {
     const sceneAudio = audio.current;
     if (isMuted || pageHidden) { sceneAudio.stop(); return; }
     if (phase === "intro") sceneAudio.guarantee();
-    if (phase === "reveal") sceneAudio.reveal();
+    if (phase === "reveal") sceneAudio.reveal(Boolean(reduceMotion));
     return () => sceneAudio.stop();
-  }, [phase, index, isMuted, pageHidden]);
+  }, [phase, index, isMuted, pageHidden, reduceMotion]);
   useEffect(() => {
     const sceneAudio = audio.current;
     return () => sceneAudio.stop();
@@ -280,6 +280,17 @@ const Component = ({ className }: Props): JSX.Element => {
           </p>
           <div className="stageGrid" aria-hidden="true" />
           <div className="ambient" aria-hidden="true" />
+          {phase === "reveal" && (
+            <div className="revealAtmosphere" key={work.slug} aria-hidden="true">
+              <div className="revealRays" />
+              <div className="revealFlash" />
+              <div className="revealRing" />
+              <div className="revealBackdropSSR">SSR</div>
+              <div className="revealStars">
+                {Array.from({ length: 24 }, (_, i) => <i key={i} style={{ "--star-x": `${5 + (i * 37) % 90}%`, "--star-y": `${6 + (i * 23) % 82}%`, animationDelay: `${0.2 + (i % 6) * 0.05}s` } as React.CSSProperties}>✦</i>)}
+              </div>
+            </div>
+          )}
           <div ref={sceneContent} className="sceneContent">
           {phase === "intro" && (
             <div className="guarantee">
@@ -403,35 +414,21 @@ const Component = ({ className }: Props): JSX.Element => {
             </div>
           )}
           {phase === "reveal" && (
-            <div className="revealScene">
+            <div className="revealScene" key={work.slug}>
               <div className="revealHalo" aria-hidden="true" />
-              <p className="revealLabel">SPECIAL SUPER RARE</p>
+              <p className="revealLabel">✦ SPECIAL SUPER RARE ✦</p>
                 <motion.article
                   key={work.slug}
                   className="heroCard"
-                  initial={
-                    reduceMotion
-                      ? { opacity: 0 }
-                      : {
-                          opacity: 0,
-                          y: 45,
-                          scale: 0.8,
-                          rotateY: -70,
-                          rotate: -5,
-                        }
-                  }
-                  animate={{
-                    opacity: 1,
-                    y: 0,
-                    scale: 1,
-                    rotateY: 0,
-                    rotate: 0,
+                  initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 90, scale: 0.55, rotateY: 110, rotate: -9 }}
+                  animate={reduceMotion ? { opacity: 1 } : {
+                    opacity: [0, 0, 1, 1],
+                    y: [90, 90, -12, 0],
+                    scale: [0.55, 0.55, 1.08, 1],
+                    rotateY: [110, 110, -10, 0],
+                    rotate: [-9, -9, 3, 0],
                   }}
-                  exit={{ opacity: 0 }}
-                  transition={{
-                    duration: reduceMotion ? 0.1 : 0.18,
-                    ease: "backOut",
-                  }}
+                  transition={{ duration: reduceMotion ? 0.1 : 0.8, times: [0, 0.25, 0.75, 1], ease: "easeOut" }}
                 >
                   <div className="cardMeta">
                     <b>SSR ✦</b>
@@ -462,7 +459,7 @@ const Component = ({ className }: Props): JSX.Element => {
                   </span>
                   <div className="cardShine" aria-hidden="true" />
                 </motion.article>
-              <p className="srOnly" role="status">{paused ? "自動送りを停止中。Pキーで再開。" : "1秒ごとに作品を表示。Pキーで一時停止。"}</p>
+              <p className="srOnly" role="status">{paused ? "自動送りを停止中。Pキーで再開。" : "各SSRの演出後に自動で次の作品を表示。Pキーで一時停止。"}</p>
               <div className="revealActions">
                 <span>
                   {String(index + 1).padStart(2, "0")} /{" "}
@@ -578,11 +575,11 @@ const StyledComponent = styled(Component)`
   }
   .sceneContent {
     position: absolute;
-    inset: 0 0 calc(${DOPAMINE_CONTROLS_SAFE_AREA}px + env(safe-area-inset-bottom));
+    inset: 0;
     overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: calc(16px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 24px max(16px, env(safe-area-inset-left));
+    padding: calc(16px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) calc(${DOPAMINE_CONTROLS_SAFE_AREA}px + 24px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   }
   .bottomControls {
     position: absolute;
@@ -606,12 +603,15 @@ const StyledComponent = styled(Component)`
     outline-offset: 8px;
   }
   .guarantee {
-    position: relative;
+    position: absolute;
+    inset: 0;
+    padding: calc(48px + env(safe-area-inset-top)) 16px calc(80px + env(safe-area-inset-bottom));
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: calc(100dvh - 104px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    min-height: 100%;
     text-align: center;
     isolation: isolate;
   }
@@ -982,6 +982,24 @@ const StyledComponent = styled(Component)`
     letter-spacing: 0.1em;
     color: #f9dfa9;
   }
+  .revealAtmosphere { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+  .revealRays {
+    position: absolute; left: 50%; top: 45%; width: 150vmax; height: 150vmax;
+    background: repeating-conic-gradient(#ffd99645 0deg 5deg, transparent 5deg 16deg, #ce9bff35 16deg 22deg, transparent 22deg 34deg);
+    mask-image: radial-gradient(transparent 8%, #000 25%, transparent 62%);
+    animation: awardRays 1.8s ease-out both;
+  }
+  .revealFlash { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 42%, #fff7d9, #efd2ff55 40%, transparent 75%); animation: awardFlash 1s ease-out both; }
+  .revealRing { position: absolute; left: 50%; top: 45%; width: min(70vw, 650px); aspect-ratio: 1; border: 2px solid #ffe5a8; border-radius: 50%; box-shadow: 0 0 30px #f4c48f; animation: awardRing 1.25s .2s ease-out both; }
+  .revealBackdropSSR { position: absolute; top: 12%; left: 50%; font-size: clamp(120px, 27vw, 380px); font-weight: 900; font-style: italic; letter-spacing: -.08em; color: #ffdfa9; animation: awardType 1.8s ease-out both; }
+  .revealStars { position: absolute; inset: 0; }
+  .revealStars i { position: absolute; left: var(--star-x); top: var(--star-y); color: #fff0b5; font-style: normal; font-size: clamp(14px, 2vw, 30px); text-shadow: 0 0 18px #ffbcf0; animation: awardStar 1.25s ease-out both; }
+  @keyframes awardHalo { from { opacity: 0; transform: scale(.5); } 35% { opacity: 1; transform: scale(1.1); } to { opacity: .5; transform: scale(1); } }
+  @keyframes awardRays { 0% { opacity: 0; transform: translate(-50%, -50%) rotate(-14deg) scale(.6); } 25% { opacity: 1; } 100% { opacity: .4; transform: translate(-50%, -50%) rotate(12deg) scale(1.1); } }
+  @keyframes awardFlash { 0%, 20% { opacity: 0; } 40% { opacity: .48; } 100% { opacity: 0; } }
+  @keyframes awardRing { from { opacity: 0; transform: translate(-50%, -50%) scale(.3); } 20% { opacity: .8; } to { opacity: 0; transform: translate(-50%, -50%) scale(1.9); } }
+  @keyframes awardType { from { opacity: 0; transform: translateX(-50%) scale(1.4); } 25%, 80% { opacity: .12; transform: translateX(-50%) scale(1); } to { opacity: .07; transform: translateX(-50%) scale(1); } }
+  @keyframes awardStar { from { opacity: 0; transform: translateY(45px) scale(.2); } 30% { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(-65px) scale(.3); } }
   .revealScene {
     position: relative;
     display: flex;
@@ -1004,14 +1022,17 @@ const StyledComponent = styled(Component)`
       #edd08855
     );
     filter: blur(38px);
-    animation: halo 12s linear infinite;
+    animation: awardHalo 1.7s ease-out both;
   }
   .revealLabel {
     position: relative;
     color: #f7d99b;
-    font-size: 11px;
-    letter-spacing: 0.2em;
+    font-size: clamp(12px, 2vw, 18px);
+    font-weight: 800;
+    letter-spacing: 0.14em;
     margin-bottom: 18px;
+    text-shadow: 0 0 18px #ffe2a4;
+    animation: awardLabel .8s ease-out both;
   }
   .heroCard,
   .resultCard {
@@ -1087,7 +1108,7 @@ const StyledComponent = styled(Component)`
       transparent 62%
     );
     transform: translateX(-120%);
-    animation: cardShine 1s 0.3s ease-out;
+    animation: cardShine .65s .75s ease-out;
   }
   .revealActions {
     position: relative;
@@ -1243,13 +1264,14 @@ const StyledComponent = styled(Component)`
       transform: rotate(360deg);
     }
   }
+  @keyframes awardLabel { from { opacity: 0; transform: scale(1.5); letter-spacing: .4em; } to { opacity: 1; transform: scale(1); letter-spacing: .14em; } }
   @keyframes cardShine {
     to {
       transform: translateX(120%);
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .introStars, .rainbowRays, .launchGlitter { display: none; }
+    .introStars, .rainbowRays, .launchGlitter, .revealAtmosphere { display: none; }
     *,
     *::before,
     *::after {

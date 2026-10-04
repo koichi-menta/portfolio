@@ -71,7 +71,12 @@ export const createWorksAudio = () => {
       tone(1568, 0.3, 0.035, 0.015);
       tone(2093, 0.25, 0.025, 0.04);
     },
-    reveal: () => { tone(1046.5, 0.35, 0.08); tone(1568, 0.4, 0.06, 0.06); },
+    reveal: (reducedMotion = false) => {
+      if (reducedMotion) { tone(1046.5, 0.35, 0.08); tone(1568, 0.4, 0.06, 0.06); return; }
+      [523.25, 659.25, 783.99].forEach((frequency, i) => tone(frequency, 0.28, 0.045, i * 0.05));
+      tone(85, 0.24, 0.28, 0.2, 42, "sine");
+      [1046.5, 1318.5, 1568].forEach(frequency => tone(frequency, 0.65, 0.065, 0.3));
+    },
     stop: () => {
       voices.forEach(({ source, gain }) => {
         const now = source.context.currentTime;
