@@ -28,8 +28,11 @@ existing hidden mode through six rapid clicks on the home logo. Override
 `PACK_BASE_URL` for a different local server and `PACK_SCREENSHOTS` for the QA
 image directory (default: `/tmp/portfolio-pack-qa`).
 
-`yarn test:review` runs browser-free React regression tests for changing mute
-during the timeline's rewind hold, canceling that hold, disabled timeline nodes
-during playback/replay, and removing/restoring the layout navigation around the
-full-screen FAQ, profile, and timeline. It mocks motion and audio boundaries;
-the Playwright scripts remain necessary for visual and keyboard-browser QA.
+`yarn test:review` runs browser-free regressions for changing mute during the
+timeline's rewind hold, canceling active rewind audio and its owned audio nodes,
+disabled timeline nodes during playback/replay, and removing/restoring layout
+navigation around the full-screen FAQ, profile, and timeline. FAQ tests check
+that long answers consume wheel, touch, and keyboard scrolling before question
+navigation, including touch cancellation and edge gestures. The tests use mocked
+scroll metrics, motion, and Web Audio boundaries; the Playwright scripts remain
+necessary for visual and keyboard-browser QA.

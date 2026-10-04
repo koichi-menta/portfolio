@@ -57,7 +57,7 @@ function load(relative, mocks, cache = new Map()) {
   return module.exports;
 }
 
-function timelineHarness(t, initiallyMuted = false) {
+function timelineHarness(t, initiallyMuted = false, throughContainer = false) {
   t.mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
   const previousWindow = global.window;
   const previousObserver = global.ResizeObserver;
@@ -68,24 +68,36 @@ function timelineHarness(t, initiallyMuted = false) {
     disconnect() {}
   };
   let isMuted = initiallyMuted;
-  let rewinds = 0;
-  const { TimelineMountain } = load("src/components/blocks/TimelineMountain/index.tsx", {
+  let isDopamine = true;
+  const rewinds = [];
+  const mocks = {
     "next/link": Link,
     "framer-motion": framer,
     "src/contexts/DopamineMode": {
       DOPAMINE_CONTROLS_SAFE_AREA: 72,
-      useDopamineMode: () => ({ isMuted }),
+      useDopamineMode: () => ({ isMuted, isDopamine }),
     },
+    "react-vertical-timeline-component": { VerticalTimeline: fragment },
+    "react-vertical-timeline-component/style.min.css": {},
+    "src/components/parts/TimelineItem": { TimelineItem: fragment },
+    "src/components/parts/Title": { Title: fragment },
     "src/components/parts/GenreIcon": { GenreIcon: () => element("span") },
     "src/components/parts/DopamineButton": { DopamineButton: props => element("button", props) },
     "src/lib/dopamineSound": {
-      playRewind: () => { rewinds += 1; },
+      playRewind: () => {
+        const sound = { stops: 0, stop() { this.stops += 1; } };
+        rewinds.push(sound);
+        return sound;
+      },
       playPop() {}, playReveal() {}, unlock() {},
     },
-  });
+  };
+  const Scene = throughContainer
+    ? load("src/components/container/Timeline/index.tsx", mocks).TimelineContainer
+    : load("src/components/blocks/TimelineMountain/index.tsx", mocks).TimelineMountain;
   let renderer;
   act(() => {
-    renderer = create(element(TimelineMountain), {
+    renderer = create(element(Scene), {
       createNodeMock: () => ({ addEventListener() {}, removeEventListener() {} }),
     });
   });
@@ -100,9 +112,15 @@ function timelineHarness(t, initiallyMuted = false) {
     tick: milliseconds => act(() => t.mock.timers.tick(milliseconds)),
     mute: value => act(() => {
       isMuted = value;
-      renderer.update(element(TimelineMountain));
+      renderer.update(element(Scene));
     }),
-    rewinds: () => rewinds,
+    exit: () => act(() => {
+      isDopamine = false;
+      renderer.update(element(Scene));
+    }),
+    rewinds: () => rewinds.length,
+    stoppedRewinds: () => rewinds.map(sound => sound.stops),
+    unmount: () => act(() => renderer.unmount()),
     nodes: () => renderer.root.findAll(node => node.type === "button" && /\b(node|summit)\b/.test(node.props.className)),
     click: className => act(() => renderer.root.find(node => node.type === "button" && node.props.className === className).props.onClick()),
   };
@@ -149,6 +167,65 @@ test("canceling the rewind hold clears its pending audio", t => {
   scene.click("skip");
   scene.tick(500);
   assert.equal(scene.rewinds(), 0);
+});
+
+for (const action of ["skip", "mute", "unmount", "mode exit"]) {
+  test(`canceling an active rewind via ${action} stops its audio once`, t => {
+    const scene = timelineHarness(t, false, action === "mode exit");
+    scene.tick(500);
+    assert.equal(scene.rewinds(), 1);
+    assert.deepEqual(scene.stoppedRewinds(), [0]);
+    if (action === "skip") scene.click("skip");
+    if (action === "mute") scene.mute(true);
+    if (action === "unmount") scene.unmount();
+    if (action === "mode exit") scene.exit();
+    assert.deepEqual(scene.stoppedRewinds(), [1]);
+    scene.tick(3000);
+    scene.unmount();
+    assert.deepEqual(scene.stoppedRewinds(), [1]);
+  });
+}
+
+test("unmuting a canceled rewind does not restart it or reset the sequence", t => {
+  const scene = timelineHarness(t);
+  scene.tick(500);
+  scene.mute(true);
+  scene.tick(500);
+  scene.mute(false);
+  scene.tick(1699);
+  assert.equal(scene.rewinds(), 1);
+  assert.deepEqual(scene.stoppedRewinds(), [1]);
+  assert.equal(scene.renderer.root.findAll(node => node.props.className === "clock rewinding").length, 1);
+  scene.tick(1);
+  assert.equal(scene.renderer.root.findAll(node => node.props.className === "clock rewinding").length, 0);
+  assert.deepEqual(scene.stoppedRewinds(), [1]);
+});
+
+test("normal rewind completion cleans audio before the next timeline event", t => {
+  const scene = timelineHarness(t);
+  scene.tick(500);
+  scene.tick(2199);
+  assert.deepEqual(scene.stoppedRewinds(), [0]);
+  scene.tick(1);
+  assert.deepEqual(scene.stoppedRewinds(), [1]);
+  scene.unmount();
+  assert.deepEqual(scene.stoppedRewinds(), [1]);
+});
+
+test("replay owns a fresh rewind and does not stop the previous sound twice", t => {
+  const scene = timelineHarness(t);
+  scene.tick(500);
+  scene.click("skip");
+  assert.deepEqual(scene.stoppedRewinds(), [1]);
+  act(() => scene.renderer.root.findAllByType("button").find(node => node.props.children === "もう一度見る").props.onClick());
+  scene.tick(499);
+  assert.equal(scene.rewinds(), 1);
+  scene.tick(1);
+  assert.equal(scene.rewinds(), 2);
+  assert.deepEqual(scene.stoppedRewinds(), [1, 0]);
+  scene.click("skip");
+  scene.unmount();
+  assert.deepEqual(scene.stoppedRewinds(), [1, 1]);
 });
 
 for (const [page, container, exported] of [["faq", "Fap", "FaqContainer"], ["profile", "Profile", "ProfileContainer"], ["timeline", "Timeline", "TimelineContainer"]]) {

@@ -11,7 +11,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:review": "node --test scripts/test-review-regressions.cjs"
+    "test:review": "node --test scripts/test-review-regressions.cjs scripts/test-review-faq-scroll.cjs scripts/test-review-rewind-audio.cjs"
   },
   "dependencies": {
     "clsx": "^1.2.1",

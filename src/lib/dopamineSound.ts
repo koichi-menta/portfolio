@@ -254,7 +254,7 @@ export const playTick = (): void => {
 };
 
 // タイムマシンの巻き戻し: キュルキュルと震えながら音程が下がっていく
-export const playRewind = (seconds: number): void => {
+export const playRewind = (seconds: number): { stop: () => void } | undefined => {
   const nodes = getNodes();
   if (!nodes) return;
   const { ctx, out } = nodes;
@@ -277,10 +277,37 @@ export const playRewind = (seconds: number): void => {
   gain.gain.setValueAtTime(0.12, now + seconds - 0.15);
   gain.gain.exponentialRampToValueAtTime(0.001, now + seconds);
   osc.connect(filter).connect(gain).connect(out);
+  let disconnected = false;
+  const disconnect = () => {
+    if (disconnected) return;
+    disconnected = true;
+    osc.onended = null;
+    lfo.onended = null;
+    osc.disconnect();
+    lfo.disconnect();
+    lfoDepth.disconnect();
+    filter.disconnect();
+    gain.disconnect();
+  };
+  // Both sources end together; either event can release this playback's graph.
+  osc.onended = disconnect;
+  lfo.onended = disconnect;
   osc.start(now);
   lfo.start(now);
   osc.stop(now + seconds);
   lfo.stop(now + seconds);
+  return {
+    stop: () => {
+      if (disconnected) return;
+      const stopTime = ctx.currentTime;
+      gain.gain.cancelScheduledValues(stopTime);
+      gain.gain.setValueAtTime(0, stopTime);
+      osc.stop(stopTime);
+      lfo.stop(stopTime);
+      // Never suspend or disconnect the shared context/master gain.
+      disconnect();
+    },
+  };
 };
 
 // MV のベースライン: 短く切ったノコギリ波を低域だけ通す

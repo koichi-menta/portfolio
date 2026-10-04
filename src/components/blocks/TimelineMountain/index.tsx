@@ -126,9 +126,15 @@ const HUD_RESERVE = 120;
 const Component = ({ className }: Props): JSX.Element => {
   const { isMuted } = useDopamineMode();
   const isMutedRef = useRef(isMuted);
+  const rewindAudioRef = useRef<ReturnType<typeof playRewind>>();
+  const stopRewindAudio = useCallback(() => {
+    rewindAudioRef.current?.stop();
+    rewindAudioRef.current = undefined;
+  }, []);
   useEffect(() => {
     isMutedRef.current = isMuted;
-  }, [isMuted]);
+    if (isMuted) stopRewindAudio();
+  }, [isMuted, stopRewindAudio]);
   const shouldReduceMotion = useReducedMotion();
   const durations = useMemo(
     () => [
@@ -270,7 +276,9 @@ const Component = ({ className }: Props): JSX.Element => {
 
     const holdId = setTimeout(() => {
       setIsRewindMoving(true);
-      if (!isMutedRef.current) playRewind(REWIND_MOVE_MS / 1000);
+      if (!isMutedRef.current) {
+        rewindAudioRef.current = playRewind(REWIND_MOVE_MS / 1000);
+      }
       controls = animate(0, 1, {
         duration: REWIND_MOVE_MS / 1000,
         ease: "easeInOut",
@@ -294,6 +302,7 @@ const Component = ({ className }: Props): JSX.Element => {
     return () => {
       clearTimeout(holdId);
       controls?.stop();
+      stopRewindAudio();
     };
     // 巻き戻しの開始時に一度だけ
     // eslint-disable-next-line react-hooks/exhaustive-deps

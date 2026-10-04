@@ -27,12 +27,37 @@ const ANSWER_START_MS = 900;
 const NAVIGATION_LOCK_MS = 700;
 const SWIPE_THRESHOLD_PX = 50;
 
+const getAnswer = (target: EventTarget | null): HTMLElement | null =>
+  target instanceof Element ? target.closest<HTMLElement>(".answer") : null;
+
+// Safari の端でのバウンドは読み進めた距離に含めない。
+const answerScrollTop = (answer: HTMLElement): number =>
+  Math.max(0, Math.min(answer.scrollTop, Math.max(0, answer.scrollHeight - answer.clientHeight)));
+
+const canScrollAnswer = (answer: HTMLElement | null, deltaY: number): boolean => {
+  if (!answer) return false;
+  if (deltaY < 0) return answerScrollTop(answer) > 1;
+  if (deltaY > 0) {
+    return answerScrollTop(answer) + answer.clientHeight < answer.scrollHeight - 1;
+  }
+  return false;
+};
+
+type TouchGesture = {
+  startY: number;
+  lastY: number;
+  answer: HTMLElement | null;
+  scrollTop: number;
+  hasScrolled: boolean;
+};
+
 type SlideProps = {
   question: string;
   answer: string;
   isLast: boolean;
   isMuted: boolean;
   onReplay: () => void;
+  answerRef: React.RefCallback<HTMLDivElement>;
 };
 
 const Slide = ({
@@ -41,6 +66,7 @@ const Slide = ({
   isLast,
   isMuted,
   onReplay,
+  answerRef,
 }: SlideProps): JSX.Element => {
   const shouldReduceMotion = useReducedMotion();
   const [isAnswering, setIsAnswering] = useState<boolean>(false);
@@ -107,7 +133,7 @@ const Slide = ({
       >
         <Image src={profile_image} alt="プロフィール画像" className="image" />
       </motion.div>
-      <div className="answer">
+      <div className="answer" ref={answerRef} tabIndex={0} role="region" aria-label="回答">
         <p>
           {shown}
           {!isDone && isAnswering && <span className="caret">▍</span>}
@@ -154,14 +180,22 @@ const Component = ({ className }: Props): JSX.Element => {
   // ホイールやキーの連続入力でも最新の位置から計算できるよう、state とは別に持つ
   const indexRef = useRef<number>(0);
   const lockedUntilRef = useRef<number>(0);
-  const touchStartYRef = useRef<number | null>(null);
+  const touchGestureRef = useRef<TouchGesture | null>(null);
   const columnRef = useRef<HTMLDivElement>(null);
+  const focusNextAnswerRef = useRef(false);
+  const answerRef = useCallback((answer: HTMLDivElement | null) => {
+    if (answer && focusNextAnswerRef.current) {
+      focusNextAnswerRef.current = false;
+      answer.focus({ preventScroll: true });
+    }
+  }, []);
 
-  const go = useCallback((delta: number) => {
+  const go = useCallback((delta: number, focusAnswer = false) => {
     const now = Date.now();
     if (now < lockedUntilRef.current) return;
     const nextIndex = indexRef.current + delta;
     if (nextIndex < 0 || nextIndex >= faqData.length) return;
+    focusNextAnswerRef.current = focusAnswer;
     lockedUntilRef.current = now + NAVIGATION_LOCK_MS;
     indexRef.current = nextIndex;
     setDirection(delta);
@@ -178,36 +212,91 @@ const Component = ({ className }: Props): JSX.Element => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowDown") go(1);
-      if (e.key === "ArrowUp") go(-1);
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+      const delta = e.key === "ArrowDown" ? 1 : e.key === "ArrowUp" ? -1 : 0;
+      const answer = getAnswer(e.target);
+      if (!delta || canScrollAnswer(answer, delta)) return;
+      e.preventDefault();
+      go(delta, Boolean(answer));
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [go]);
 
-  // ページ自体がスクロールしないよう preventDefault するため、passive: false で登録する
+  // 回答を読んでいる間はネイティブスクロールを優先し、端からの操作で質問を切り替える。
   useEffect(() => {
     const column = columnRef.current;
     if (!column) return;
     const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.deltaY === 0) return;
+      if (canScrollAnswer(getAnswer(e.target), e.deltaY)) return;
       e.preventDefault();
       if (Math.abs(e.deltaY) < 10) return;
       go(e.deltaY > 0 ? 1 : -1);
     };
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) {
+        touchGestureRef.current = null;
+        return;
+      }
+      const answer = getAnswer(e.target);
+      touchGestureRef.current = {
+        startY: e.touches[0].clientY,
+        lastY: e.touches[0].clientY,
+        answer,
+        scrollTop: answer ? answerScrollTop(answer) : 0,
+        hasScrolled: false,
+      };
+    };
+    const handleTouchMove = (e: TouchEvent) => {
+      const gesture = touchGestureRef.current;
+      if (e.touches.length !== 1) {
+        touchGestureRef.current = null;
+        return;
+      }
+      if (!gesture) return;
+      const deltaY = gesture.lastY - e.touches[0].clientY;
+      gesture.lastY = e.touches[0].clientY;
+      if (canScrollAnswer(gesture.answer, deltaY)) gesture.hasScrolled = true;
+      // 途中で端に着いても、そのスワイプは回答を読むための操作として扱う。
+      // 回答内では端から逆方向に動かし直す操作もネイティブスクロールに任せる。
+      if (!gesture.answer && deltaY !== 0) e.preventDefault();
+    };
+    const handleTouchEnd = (e: TouchEvent) => {
+      const gesture = touchGestureRef.current;
+      touchGestureRef.current = null;
+      if (!gesture || e.touches.length > 0 || e.changedTouches.length !== 1) {
+        return;
+      }
+      const deltaY = gesture.startY - e.changedTouches[0].clientY;
+      if (
+        gesture.hasScrolled ||
+        (gesture.answer &&
+          Math.abs(answerScrollTop(gesture.answer) - gesture.scrollTop) > 1) ||
+        canScrollAnswer(gesture.answer, deltaY) ||
+        Math.abs(deltaY) < SWIPE_THRESHOLD_PX
+      ) {
+        return;
+      }
+      go(deltaY > 0 ? 1 : -1);
+    };
+    const handleTouchCancel = () => {
+      touchGestureRef.current = null;
+    };
     column.addEventListener("wheel", handleWheel, { passive: false });
-    return () => column.removeEventListener("wheel", handleWheel);
+    column.addEventListener("touchstart", handleTouchStart, { passive: true });
+    column.addEventListener("touchmove", handleTouchMove, { passive: false });
+    column.addEventListener("touchend", handleTouchEnd, { passive: true });
+    column.addEventListener("touchcancel", handleTouchCancel, { passive: true });
+    return () => {
+      column.removeEventListener("wheel", handleWheel);
+      column.removeEventListener("touchstart", handleTouchStart);
+      column.removeEventListener("touchmove", handleTouchMove);
+      column.removeEventListener("touchend", handleTouchEnd);
+      column.removeEventListener("touchcancel", handleTouchCancel);
+      touchGestureRef.current = null;
+    };
   }, [go]);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartYRef.current = e.touches[0].clientY;
-  };
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartYRef.current === null) return;
-    const deltaY = touchStartYRef.current - e.changedTouches[0].clientY;
-    touchStartYRef.current = null;
-    if (Math.abs(deltaY) < SWIPE_THRESHOLD_PX) return;
-    go(deltaY > 0 ? 1 : -1);
-  };
 
   const item = faqData[index];
 
@@ -217,12 +306,7 @@ const Component = ({ className }: Props): JSX.Element => {
         <Link href="/" className="close" aria-label="トップページに戻る">
           <TbX size={24} />
         </Link>
-        <div
-          className="column"
-          ref={columnRef}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-        >
+        <div className="column" ref={columnRef}>
           <AnimatePresence initial={false} custom={direction}>
             <motion.div
               key={`${round}-${index}`}
@@ -244,6 +328,7 @@ const Component = ({ className }: Props): JSX.Element => {
                 isLast={index === faqData.length - 1}
                 isMuted={isMuted}
                 onReplay={replay}
+                answerRef={answerRef}
               />
             </motion.div>
           </AnimatePresence>
@@ -306,7 +391,7 @@ const StyledComponent = styled(Component)`
     max-width: 440px;
     height: calc(100svh - ${DOPAMINE_CONTROLS_SAFE_AREA}px);
     overflow: hidden;
-    touch-action: none;
+    touch-action: pan-y pinch-zoom;
     background: linear-gradient(160deg, #ffe3f6, #fff8c4, #c9fff0, #d6ecff);
     @media (${device.tablet}) {
       margin-top: 12px;
@@ -422,8 +507,10 @@ const StyledComponent = styled(Component)`
 
     > .answer {
       flex: 1;
+      min-height: 0;
       width: 100%;
       overflow-y: auto;
+      overscroll-behavior-y: contain;
       font-size: 15px;
       line-height: 1.8;
       > .tapHint {
