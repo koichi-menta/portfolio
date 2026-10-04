@@ -10,7 +10,7 @@ const Profile: NextPage = () => {
         <title>Koichi&apos;s portfolio | profile</title>
         <meta name="description" content="Koichi's portfolio" />
       </Head>
-      <Layout>
+      <Layout hideChromeInDopamine>
         <ProfileContainer />
       </Layout>
     </>

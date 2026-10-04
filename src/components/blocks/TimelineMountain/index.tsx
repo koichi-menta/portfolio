@@ -125,6 +125,10 @@ const HUD_RESERVE = 120;
 
 const Component = ({ className }: Props): JSX.Element => {
   const { isMuted } = useDopamineMode();
+  const isMutedRef = useRef(isMuted);
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
   const shouldReduceMotion = useReducedMotion();
   const durations = useMemo(
     () => [
@@ -266,7 +270,7 @@ const Component = ({ className }: Props): JSX.Element => {
 
     const holdId = setTimeout(() => {
       setIsRewindMoving(true);
-      if (!isMuted) playRewind(REWIND_MOVE_MS / 1000);
+      if (!isMutedRef.current) playRewind(REWIND_MOVE_MS / 1000);
       controls = animate(0, 1, {
         duration: REWIND_MOVE_MS / 1000,
         ease: "easeInOut",
@@ -457,6 +461,7 @@ const Component = ({ className }: Props): JSX.Element => {
               type="button"
               className={clsx("summit", isNowFocused && "focused")}
               style={{ left: SUMMIT.x, top: 130 }}
+              disabled={!isDone}
               onClick={() => isDone && goToStop(NOW_STOP)}
             >
               <TbFlag className="flag" />
@@ -474,6 +479,7 @@ const Component = ({ className }: Props): JSX.Element => {
                 )}
                 style={{ left: EVENT_POINTS[i].x, top: EVENT_POINTS[i].y }}
                 aria-label={event.title}
+                disabled={!isDone}
                 onClick={() => isDone && goToStop(i)}
               >
                 <GenreIcon genre={event.genre} />

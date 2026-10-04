@@ -10,7 +10,7 @@ const Faq: NextPage = () => {
         <title>Koichi&apos;s portfolio | faq</title>
         <meta name="description" content="Koichi's portfolio" />
       </Head>
-      <Layout>
+      <Layout hideChromeInDopamine>
         <FaqContainer />
       </Layout>
     </>

@@ -10,7 +10,7 @@ const Timeline: NextPage = () => {
         <title>Koichi&apos;s portfolio | timeline</title>
         <meta name="description" content="Koichi's portfolio" />
       </Head>
-      <Layout>
+      <Layout hideChromeInDopamine>
         <TimelineContainer />
       </Layout>
     </>

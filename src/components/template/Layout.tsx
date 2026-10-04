@@ -9,26 +9,36 @@ import {
 
 export type ContainerProps = {
   children: ReactNode;
+  hideChromeInDopamine?: boolean;
 };
 type Props = {
   className?: string;
   isDopamine: boolean;
 } & ContainerProps;
 
-const Component = ({ className, children }: Props): JSX.Element => (
+const Component = ({
+  className,
+  children,
+  isDopamine,
+  hideChromeInDopamine = false,
+}: Props): JSX.Element => (
   <div className={className}>
-    <div className="header">
-      <div className="inner">
-        <Header />
+    {!(isDopamine && hideChromeInDopamine) && (
+      <div className="header">
+        <div className="inner">
+          <Header />
+        </div>
       </div>
-    </div>
+    )}
     <div className="main">{children}</div>
-    <div className="footer">
-      <Link href="/" className="link">
-        トップページに戻る
-      </Link>
-      <small className="copyright">&copy; 2023 Koichi</small>
-    </div>
+    {!(isDopamine && hideChromeInDopamine) && (
+      <div className="footer">
+        <Link href="/" className="link">
+          トップページに戻る
+        </Link>
+        <small className="copyright">&copy; 2023 Koichi</small>
+      </div>
+    )}
   </div>
 );
 
