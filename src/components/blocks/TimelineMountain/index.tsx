@@ -179,8 +179,9 @@ const Component = ({ className }: Props): JSX.Element => {
   }, []);
 
   const closeUpScale = Math.min(size.width, size.height) / 360;
-  // アップのときは下に説明カードを出すので、注目点を画面の少し上に寄せる
+  // 注目点のすぐ下に日付・出来事をまとめたカードを置く
   const closeUpAnchor = 0.3;
+  const eventPanelTop = DISPLAY_HEIGHT + size.height * closeUpAnchor + 28 * closeUpScale + 12;
 
   const cameraFor = useCallback(
     (point: Point, scale: number, anchorY: number) => ({
@@ -500,21 +501,25 @@ const Component = ({ className }: Props): JSX.Element => {
           )}
         </div>
 
-        <div className="hud">
+        <div className="hud" style={{
+          "--event-panel-top": `${eventPanelTop}px`,
+          "--event-panel-reserve": `${isDone ? 104 : 16}px`,
+        } as React.CSSProperties}>
           <AnimatePresence mode="wait">
             {focusedEvent && (
-              <motion.div
+              <motion.article
                 key={focusedEvent.title}
-                className="card"
+                className="card eventCard"
+                aria-label={`${focusedEvent.date} ${focusedEvent.title}`}
                 initial={{ y: 40, opacity: 0, scale: 0.9 }}
                 animate={{ y: 0, opacity: 1, scale: 1 }}
                 exit={{ y: -20, opacity: 0, transition: { duration: 0.12 } }}
                 transition={{ type: "spring", stiffness: 400, damping: 26 }}
               >
-                <p className="date">{focusedEvent.date}</p>
+                <time className="date" dateTime={formatDate(parseDate(focusedEvent.date)).replace(/\//g, "-")}>{focusedEvent.date}</time>
                 <p className="title">{focusedEvent.title}</p>
                 <p className="description">{focusedEvent.description}</p>
-              </motion.div>
+              </motion.article>
             )}
             {isNowFocused && (
               <motion.div
@@ -732,6 +737,7 @@ const StyledComponent = styled(Component)`
     }
     &.focused {
       box-shadow: 0 0 24px 10px rgba(255, 106, 213, 0.9);
+      > .nodeDate { visibility: hidden; }
     }
   }
 
@@ -777,6 +783,19 @@ const StyledComponent = styled(Component)`
         line-height: 1.6;
         opacity: 0.85;
       }
+    }
+    .eventCard {
+      position: fixed;
+      top: var(--event-panel-top);
+      left: max(16px, calc((100vw - 520px) / 2));
+      right: max(16px, calc((100vw - 520px) / 2));
+      width: auto;
+      max-width: none;
+      max-height: max(100px, calc(100dvh - var(--event-panel-top) - ${DOPAMINE_CONTROLS_SAFE_AREA + 8}px - var(--event-panel-reserve)));
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      > .date { display: block; font-size: clamp(20px, 3vw, 28px); font-weight: bold; line-height: 1.2; }
+      > .title { margin-top: 6px; }
     }
     .nowCard {
       text-align: center;
