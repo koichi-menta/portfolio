@@ -6,7 +6,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { TbHandFinger } from "react-icons/tb";
 import worksData, { WorksData } from "src/works";
 import { device } from "src/constants/breakpoints";
-import { useDopamineMode } from "src/contexts/DopamineMode";
+import { DOPAMINE_CONTROLS_SAFE_AREA, useDopamineMode } from "src/contexts/DopamineMode";
 import { playPop, playReveal, playTick, unlock } from "src/lib/dopamineSound";
 
 type Phase = "intro" | "sealed" | "charging" | "burst" | "reveal" | "collection";
@@ -33,12 +33,14 @@ export type ContainerProps = {};
 type Props = ContainerProps & { className?: string };
 
 const Component = ({ className }: Props): JSX.Element => {
-  const { isMuted, toggleMute, disable } = useDopamineMode();
+  const { isMuted, disable } = useDopamineMode();
   const reduceMotion = useReducedMotion();
   const [phase, setPhase] = useState<Phase>("intro");
   const phaseRef = useRef<Phase>("intro");
   const dialog = useRef<HTMLDialogElement>(null);
-  const closeButton = useRef<HTMLButtonElement>(null);
+  const normalButton = useRef<HTMLButtonElement>(null);
+  const sceneContent = useRef<HTMLDivElement>(null);
+  const revealTitle = useRef<HTMLHeadingElement>(null);
   const [progress, setProgress] = useState(0);
   const [index, setIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -50,12 +52,8 @@ const Component = ({ className }: Props): JSX.Element => {
   const paused = manualPause || linkHovered || linkFocused || pageHidden;
   const stopAuto = () => window.clearTimeout(autoTimer.current);
   const drag = useRef<Drag | null>(null);
-  const openButton = useRef<HTMLButtonElement>(null);
-  const nextButton = useRef<HTMLButtonElement>(null);
-  const skipButton = useRef<HTMLButtonElement>(null);
+  const packElement = useRef<HTMLDivElement>(null);
   const collectionTitle = useRef<HTMLHeadingElement>(null);
-  const replayButton = useRef<HTMLButtonElement>(null);
-  const returnToReplay = useRef(false);
   const previousPhase = useRef<Phase>("intro");
   const moveTo = (next: Phase) => {
     phaseRef.current = next;
@@ -72,7 +70,6 @@ const Component = ({ className }: Props): JSX.Element => {
     moveTo(reduceMotion ? "reveal" : "charging");
   };
   const reset = () => {
-    if (phaseRef.current === "collection") returnToReplay.current = true;
     drag.current = null;
     stopAuto();
     setIsDragging(false);
@@ -83,17 +80,9 @@ const Component = ({ className }: Props): JSX.Element => {
     setIndex(0);
     moveTo("intro");
   };
-  const close = () => {
-    stopAuto();
-    drag.current = null;
-    moveTo("collection");
-  };
-  const immersive = phase !== "collection";
-
   // A native modal keeps background links inert and traps focus. Restore the
   // exact scroll position/styles even when routing away or disabling the mode.
   useEffect(() => {
-    if (!immersive) return;
     const modal = dialog.current;
     if (!modal) return;
     const y = window.scrollY;
@@ -109,13 +98,13 @@ const Component = ({ className }: Props): JSX.Element => {
     body.style.width = "100%";
     body.style.overflow = "hidden";
     modal.showModal();
-    closeButton.current?.focus({ preventScroll: true });
+    normalButton.current?.focus({ preventScroll: true });
     return () => {
       modal.close();
       Object.assign(body.style, original);
       window.scrollTo(0, y);
     };
-  }, [immersive]);
+  }, []);
 
   // One timer per phase. Skipping, resetting, disabling the mode or navigating
   // away cancels it; repeated pointer/click events cannot start a second sequence.
@@ -165,12 +154,12 @@ const Component = ({ className }: Props): JSX.Element => {
   useEffect(() => {
     if (phase === previousPhase.current) return;
     previousPhase.current = phase;
-    if (phase === "charging")
-      skipButton.current?.focus({ preventScroll: true });
-    if (phase === "reveal") nextButton.current?.focus({ preventScroll: true });
-    if (phase === "collection")
-      (returnToReplay.current ? replayButton.current : collectionTitle.current)?.focus({ preventScroll: true });
-    if (phase === "sealed") openButton.current?.focus({ preventScroll: true });
+    if (phase === "reveal") revealTitle.current?.focus({ preventScroll: true });
+    if (phase === "collection") {
+      sceneContent.current?.scrollTo(0, 0);
+      collectionTitle.current?.focus({ preventScroll: true });
+    }
+    if (phase === "sealed") packElement.current?.focus({ preventScroll: true });
   }, [phase]);
 
   const startTear = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -230,65 +219,37 @@ const Component = ({ className }: Props): JSX.Element => {
       aria-label="作品カードパック"
       data-phase={phase}
     >
-      <div className="packHeader">
-        <p className="eyebrow">KOICHI’S WORKS / COLLECTION 01</p>
-        <h3>
-          {phase === "collection"
-            ? "すべての作品を、手の中に。"
-            : "つくってきたものを、開けよう。"}
-        </h3>
-        <p className="intro">
-          {worksData.length}
-          枚の作品カード入り。すべてSSRのポートフォリオパック。
-        </p>
-      </div>
-      {phase !== "collection" ? (
         <dialog
           ref={dialog}
-          className={`stage ${phase}`}
+          className={`stage phase-${phase}`}
           aria-label="SSR作品パック開封"
-          onCancel={(event) => { event.preventDefault(); close(); }}
+          onCancel={(event) => { event.preventDefault(); disable(); }}
+          onKeyDown={(event) => {
+            if (event.repeat) return;
+            if (event.key.toLowerCase() === "r" && phase === "collection") reset();
+            if (event.key.toLowerCase() === "p" && phase === "reveal") {
+              stopAuto();
+              setManualPause(!manualPause);
+            }
+          }}
         >
           <p className="srOnly" role="status" aria-live="polite">
             {phase === "intro" ? "SSR確定。すべての作品がスペシャルレア。" : phase === "sealed"
-              ? "パックの上の切り口を左右になぞるか、パックを開けるボタンを押してください。"
+              ? "パックの切り口を左右になぞって開封。キーボードではパックにフォーカスしてEnterまたはスペース。"
               : phase === "reveal"
                 ? `SSR ${index + 1}枚目、全${worksData.length}枚。${work.title}`
-                : "パックを開封しています。"}
+                : phase === "collection" ? "すべての作品を表示しました。Rキーで再開封できます。" : "パックを開封しています。"}
           </p>
-          <div className="sceneControls">
-            <button ref={closeButton} onClick={close}>← 作品一覧に戻る</button>
-            <div>
-              <button onClick={toggleMute} aria-label={isMuted ? "音を出す" : "音を消す"}>{isMuted ? "音 OFF" : "音 ON"}</button>
-              <button onClick={disable}>正気に戻る</button>
-            </div>
-          </div>
           <div className="stageGrid" aria-hidden="true" />
           <div className="ambient" aria-hidden="true" />
-          <div className="stageTop">
-            <span>PORTFOLIO BOOSTER</span>
-            <span>✦ ALL SSR</span>
-          </div>
+          <div ref={sceneContent} className="sceneContent">
           {phase === "intro" && (
             <div className="guarantee">
               <div className="guaranteeLight" aria-hidden="true" />
               <p>この出会いは、特別。</p>
               <h2><span>SSR</span>確定</h2>
               <p className="guaranteeCaption">{worksData.length} WORKS · ALL SPECIAL SUPER RARE</p>
-              <button className="primary" onClick={() => moveTo("sealed")}>パックへ進む →</button>
             </div>
-          )}
-          {phase !== "intro" && phase !== "sealed" && (
-            <button
-              ref={skipButton}
-              className="skip"
-              onClick={() => {
-                drag.current = null;
-                moveTo("collection");
-              }}
-            >
-              すべて見る ↗
-            </button>
           )}
           {(phase === "sealed" ||
             phase === "charging" ||
@@ -321,7 +282,18 @@ const Component = ({ className }: Props): JSX.Element => {
                 </div>
               )}
               <div
+                ref={packElement}
                 className="pack"
+                role={phase === "sealed" ? "button" : undefined}
+                tabIndex={phase === "sealed" ? 0 : undefined}
+                aria-label={phase === "sealed" ? "作品パックを開封（左右になぞる、Enterまたはスペース）" : undefined}
+                onKeyDown={(event) => {
+                  if (phase !== "sealed" || event.repeat) return;
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    open();
+                  }
+                }}
                 style={
                   {
                     "--tear": `${progress * 100}%`,
@@ -422,12 +394,12 @@ const Component = ({ className }: Props): JSX.Element => {
                     alt=""
                     priority
                   />
-                  <h4>{work.title}</h4>
+                  <h4 ref={revealTitle} tabIndex={-1}>{work.title}</h4>
                   <p>{work.description}</p>
                   <span
                     className="linkInteraction"
                     onPointerEnter={(event) => {
-                      if (event.pointerType !== "mouse") return;
+                      if (event.pointerType !== "mouse" || !window.matchMedia("(hover: hover)").matches) return;
                       stopAuto();
                       setLinkHovered(true);
                     }}
@@ -440,45 +412,18 @@ const Component = ({ className }: Props): JSX.Element => {
                   </span>
                   <div className="cardShine" aria-hidden="true" />
                 </motion.article>
-              <div className="autoControls">
-                <span role="status">{paused ? "自動送りを停止中" : "1秒ごとに作品を表示"}</span>
-                <button onClick={() => { stopAuto(); setManualPause(!manualPause); }}>
-                  {manualPause ? "自動送りを再開" : "一時停止"}
-                </button>
-              </div>
+              <p className="srOnly" role="status">{paused ? "自動送りを停止中。Pキーで再開。" : "1秒ごとに作品を表示。Pキーで一時停止。"}</p>
               <div className="revealActions">
                 <span>
                   {String(index + 1).padStart(2, "0")} /{" "}
                   {String(worksData.length).padStart(2, "0")}
                 </span>
-                <button
-                  ref={nextButton}
-                  className="primary"
-                  onClick={() => {
-                    stopAuto();
-                    setManualPause(true);
-                    setLinkHovered(false);
-                    setLinkFocused(false);
-                    if (index < worksData.length - 1)
-                      setIndex((current) =>
-                        Math.min(current + 1, worksData.length - 1),
-                      );
-                    else moveTo("collection");
-                  }}
-                >
-                  {index < worksData.length - 1
-                    ? "次のカード →"
-                    : "コレクションを見る →"}
-                </button>
               </div>
             </div>
           )}
           {phase === "sealed" && (
             <div className="openActions">
               <p>切り口を指でスワイプ / マウスでドラッグ</p>
-              <button ref={openButton} className="openFallback" onClick={open}>
-                ボタンでパックを開ける ↗
-              </button>
             </div>
           )}
           {(phase === "charging" || phase === "burst") && (
@@ -488,13 +433,7 @@ const Component = ({ className }: Props): JSX.Element => {
                 : "✦ COLLECTION UNLOCKED ✦"}
             </p>
           )}
-          {phase !== "intro" && phase !== "sealed" && (
-            <button className="reset" onClick={reset}>
-              開封前に戻る
-            </button>
-          )}
-        </dialog>
-      ) : (
+          {phase === "collection" && (
         <div className="collection">
           <h4 ref={collectionTitle} tabIndex={-1}>
             COLLECTION COMPLETE{" "}
@@ -516,12 +455,13 @@ const Component = ({ className }: Props): JSX.Element => {
               </article>
             ))}
           </div>
-          <button ref={replayButton} className="primary" onClick={reset}>
-            もう一度パックを開ける ↻
-          </button>
-          <button className="normalWorks" onClick={disable}>通常の作品一覧に戻る</button>
         </div>
-      )}
+          )}
+          </div>
+          <div className="bottomControls">
+            <button ref={normalButton} onClick={disable}>正気に戻る</button>
+          </div>
+        </dialog>
     </section>
   );
 };
@@ -551,23 +491,6 @@ const StyledComponent = styled(Component)`
     white-space: nowrap;
     border: 0;
   }
-  .packHeader {
-    text-align: center;
-    margin: 30px 0 24px;
-  }
-  .eyebrow {
-    font-size: 10px;
-    letter-spacing: 0.18em;
-    font-weight: 800;
-  }
-  .packHeader h3 {
-    margin: 10px 0;
-    font-size: clamp(19px, 3vw, 28px);
-  }
-  .intro {
-    font-size: 12px;
-    line-height: 1.8;
-  }
   .stage {
     position: fixed;
     inset: 0;
@@ -577,10 +500,9 @@ const StyledComponent = styled(Component)`
     height: 100dvh;
     max-height: none;
     margin: 0;
-    padding: calc(16px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    padding: 0;
     isolation: isolate;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
     overscroll-behavior: contain;
     border-radius: 0;
     color: #f5f2ff;
@@ -588,21 +510,34 @@ const StyledComponent = styled(Component)`
     border: 0;
   }
   .stage::backdrop { background: #100d21; }
-  .sceneControls {
-    position: relative;
-    z-index: 5;
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
+  .sceneContent {
+    position: absolute;
+    inset: 0 0 calc(${DOPAMINE_CONTROLS_SAFE_AREA}px + env(safe-area-inset-bottom));
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: calc(16px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 24px max(16px, env(safe-area-inset-left));
   }
-  .sceneControls > div { display: flex; gap: 8px; }
-  .sceneControls button {
-    border: 1px solid #ffffff40;
-    border-radius: 99px;
-    padding: 9px 12px;
-    color: #eee6ff;
-    background: #100d21cc;
-    font-size: 11px;
+  .bottomControls {
+    position: absolute;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+  }
+  .bottomControls button {
+    height: 36px;
+    padding: 0 20px;
+    border: 2px solid #333;
+    border-radius: 999px;
+    background: #fffff8;
+    color: #333;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .pack:focus-visible {
+    outline: 3px solid #fc69dc;
+    outline-offset: 8px;
   }
   .guarantee {
     position: relative;
@@ -610,7 +545,7 @@ const StyledComponent = styled(Component)`
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: calc(100dvh - 180px);
+    min-height: calc(100dvh - 104px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     text-align: center;
     isolation: isolate;
   }
@@ -637,7 +572,6 @@ const StyledComponent = styled(Component)`
   }
   .guarantee h2 span { display: block; font-size: 1.45em; font-style: italic; }
   .guarantee .guaranteeCaption { font-size: 9px; letter-spacing: .18em; }
-  .guarantee .primary { margin-top: 26px; }
   @keyframes guaranteeType {
     0% { opacity: 0; transform: scale(.72); filter: blur(16px); }
     24% { opacity: 1; transform: scale(.88); filter: blur(0); }
@@ -651,7 +585,6 @@ const StyledComponent = styled(Component)`
     70% { opacity: 1; transform: scale(1.2) rotate(20deg); }
     100% { opacity: 0; transform: scale(1.6) rotate(40deg); }
   }
-  .normalWorks { border: 0; background: transparent; text-decoration: underline; padding: 12px; }
   .stageGrid {
     position: absolute;
     inset: 0;
@@ -669,23 +602,11 @@ const StyledComponent = styled(Component)`
     z-index: -1;
     background: radial-gradient(ellipse at 50% 45%, #69438c66, transparent 65%);
   }
-  .stageTop {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 18px 8px;
-    font-size: 9px;
-    letter-spacing: 0.14em;
-    color: #c2b4d7;
-  }
-  .stageTop span:last-child {
-    color: #f5d69b;
-  }
   .packScene {
     position: relative;
     width: 248px;
     height: 365px;
-    margin: 55px auto 0;
+    margin: max(130px, calc((100dvh - 450px) / 2)) auto 0;
     perspective: 1000px;
   }
   .pack {
@@ -919,28 +840,20 @@ const StyledComponent = styled(Component)`
     color: #c4bbd7;
     margin-bottom: 12px;
   }
-  .openFallback {
-    border: 1px solid #a092b3;
-    border-radius: 99px;
-    background: #ffffff0a;
-    color: #f2ebfa;
-    padding: 10px 20px;
-    font-size: 12px;
-  }
-  .charging .pack {
+  .phase-charging .pack {
     animation: anticipate 0.36s ease-in forwards;
   }
-  .charging .tearZone,
-  .burst .tearZone {
+  .phase-charging .tearZone,
+  .phase-burst .tearZone {
     display: none;
   }
-  .burst .packLid {
+  .phase-burst .packLid {
     animation: lidAway 0.65s ease-out forwards;
   }
-  .burst .packBody {
+  .phase-burst .packBody {
     animation: bodyAway 0.8s ease-in forwards;
   }
-  .burst .packShadow {
+  .phase-burst .packShadow {
     opacity: 0;
   }
   .burstRing {
@@ -991,28 +904,6 @@ const StyledComponent = styled(Component)`
     font-size: 12px;
     letter-spacing: 0.1em;
     color: #f9dfa9;
-  }
-  .skip {
-    position: absolute;
-    top: calc(82px + env(safe-area-inset-top));
-    right: 20px;
-    z-index: 3;
-    background: transparent;
-    color: #d4c8e3;
-    border: 0;
-    padding: 10px;
-    font-size: 11px;
-  }
-  .reset {
-    display: block;
-    position: relative;
-    margin: 18px auto 22px;
-    padding: 8px 16px;
-    color: #c8bcd9;
-    background: transparent;
-    border: 0;
-    font-size: 11px;
-    text-decoration: underline;
   }
   .revealScene {
     position: relative;
@@ -1129,26 +1020,6 @@ const StyledComponent = styled(Component)`
     max-width: 340px;
     margin-top: 24px;
   }
-  .autoControls {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    width: 100%;
-    max-width: 340px;
-    margin-top: 16px;
-    color: #c8bcd9;
-    font-size: 10px;
-  }
-  .autoControls button {
-    border: 1px solid #ffffff50;
-    border-radius: 99px;
-    padding: 8px 12px;
-    background: transparent;
-    color: #f3dcae;
-    font-size: 11px;
-  }
   .linkInteraction { display: inline-block; }
   .revealActions > span {
     font-size: 11px;
@@ -1156,16 +1027,9 @@ const StyledComponent = styled(Component)`
     letter-spacing: 0.1em;
     white-space: nowrap;
   }
-  .primary {
-    background: linear-gradient(115deg, #f3d595, #edd5fa);
-    border: 0;
-    border-radius: 99px;
-    padding: 13px 21px;
-    color: #30213b;
-    font-size: 12px;
-    font-weight: 800;
-  }
   .collection {
+    max-width: 1000px;
+    margin: 16px auto 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1198,26 +1062,18 @@ const StyledComponent = styled(Component)`
     }
   }
   @media (max-width: 380px) {
-    .stageTop {
-      padding: 20px 14px;
-      font-size: 8px;
-    }
     .packScene {
       width: 222px;
     }
     .packTitle {
       font-size: 43px;
     }
-    .primary {
-      padding: 12px 15px;
-    }
   }
   @media (min-height: 800px) {
-    .packScene { margin-top: max(70px, calc((100dvh - 650px) / 2)); }
     .revealScene { padding-top: max(45px, calc((100dvh - 740px) / 2)); }
   }
   @media (max-height: 720px) {
-    .packScene { margin-top: 35px; height: 300px; width: 215px; }
+    .packScene { margin-top: 95px; height: 300px; width: 215px; }
     .packTitle { margin-top: 18px; font-size: 38px; }
     .packCaption { margin-top: 9px; }
     .packFooter { bottom: 20px; }
