@@ -181,7 +181,7 @@ const Component = ({ className }: Props): JSX.Element => {
   const closeUpScale = Math.min(size.width, size.height) / 360;
   // 注目点のすぐ下に日付・出来事をまとめたカードを置く
   const closeUpAnchor = 0.3;
-  const eventPanelTop = DISPLAY_HEIGHT + size.height * closeUpAnchor + 28 * closeUpScale + 12;
+  const eventPanelTop = DISPLAY_HEIGHT + size.height * closeUpAnchor + (isNowFocused ? 40 : 28) * closeUpScale + 12;
 
   const cameraFor = useCallback(
     (point: Point, scale: number, anchorY: number) => ({
@@ -524,7 +524,7 @@ const Component = ({ className }: Props): JSX.Element => {
             {isNowFocused && (
               <motion.div
                 key="now"
-                className="card nowCard"
+                className="card eventCard nowCard"
                 initial={{ scale: 0.4, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ y: -20, opacity: 0, transition: { duration: 0.12 } }}

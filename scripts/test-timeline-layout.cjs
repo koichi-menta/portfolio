@@ -34,6 +34,10 @@ fs.mkdirSync(out,{recursive:true});
  for(const options of [{viewport:{width:1440,height:900}},{viewport:{width:390,height:844},isMobile:true,hasTouch:true},{viewport:{width:320,height:640},isMobile:true,hasTouch:true,reducedMotion:'reduce'}]){
   const {context,page}=await enter(options),width=options.viewport.width;
   await page.getByRole('button',{name:'スキップ ≫',exact:true}).click();await page.getByRole('button',{name:'もう一度見る',exact:true}).waitFor();
+  await page.waitForTimeout(750);
+  const nowGap=await page.locator('.nowCard').evaluate(el=>el.getBoundingClientRect().top-document.querySelector('.summit.focused').getBoundingClientRect().bottom);
+  assert.ok(nowGap>=8&&nowGap<=16,`Hello World sits immediately below NOW: ${nowGap}`);
+  if(width===1440||width===390) await page.screenshot({path:path.join(out,`timeline-now-${width}.png`)});
   for(let index=events.length-1;index>=0;index--){
    await page.keyboard.press('ArrowDown');await check(page,index);
    if(width===1440&&index===5) await page.screenshot({path:path.join(out,'timeline-pc-latest.png')});
@@ -55,7 +59,7 @@ fs.mkdirSync(out,{recursive:true});
  }
  const sequence=await enter({viewport:{width:1440,height:900}});
  const order=await sequence.page.evaluate(()=>new Promise(resolve=>{
-  const dates=[];const observer=new MutationObserver(()=>{const date=document.querySelector('.eventCard .date')?.textContent;if(date&&dates.at(-1)!==date)dates.push(date);if(document.querySelector('.ending')){observer.disconnect();resolve(dates);}});observer.observe(document.body,{childList:true,subtree:true});
+  const dates=[];const observer=new MutationObserver(()=>{const date=document.querySelector('.eventCard:not(.nowCard) .date')?.textContent;if(date&&dates.at(-1)!==date)dates.push(date);if(document.querySelector('.ending')){observer.disconnect();resolve(dates);}});observer.observe(document.body,{childList:true,subtree:true});
  }));
  assert.deepEqual(order,events.map(event=>event.date),'Automatic mountain journey preserves event order');
  await sequence.context.close();await browser.close();assert.deepEqual(errors,[]);console.log(`PASS: all dates/events aligned, PC/mobile/small reduced motion, overview, replay, normal exit and automatic order. Screenshots: ${out}`);
