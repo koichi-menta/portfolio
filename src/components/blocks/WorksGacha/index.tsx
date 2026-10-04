@@ -8,7 +8,7 @@ import { device } from "src/constants/breakpoints";
 import { useDopamineMode } from "src/contexts/DopamineMode";
 import { playPop, playReveal, playTick, unlock } from "src/lib/dopamineSound";
 
-type Phase = "sealed" | "charging" | "burst" | "reveal" | "collection";
+type Phase = "intro" | "sealed" | "charging" | "burst" | "reveal" | "collection";
 type Drag = {
   id: number;
   startX: number;
@@ -32,10 +32,12 @@ export type ContainerProps = {};
 type Props = ContainerProps & { className?: string };
 
 const Component = ({ className }: Props): JSX.Element => {
-  const { isMuted } = useDopamineMode();
+  const { isMuted, toggleMute, disable } = useDopamineMode();
   const reduceMotion = useReducedMotion();
-  const [phase, setPhase] = useState<Phase>("sealed");
-  const phaseRef = useRef<Phase>("sealed");
+  const [phase, setPhase] = useState<Phase>("intro");
+  const phaseRef = useRef<Phase>("intro");
+  const dialog = useRef<HTMLDialogElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
   const [progress, setProgress] = useState(0);
   const [index, setIndex] = useState(0);
   const drag = useRef<Drag | null>(null);
@@ -43,7 +45,9 @@ const Component = ({ className }: Props): JSX.Element => {
   const nextButton = useRef<HTMLButtonElement>(null);
   const skipButton = useRef<HTMLButtonElement>(null);
   const collectionTitle = useRef<HTMLHeadingElement>(null);
-  const previousPhase = useRef<Phase>("sealed");
+  const replayButton = useRef<HTMLButtonElement>(null);
+  const returnToReplay = useRef(false);
+  const previousPhase = useRef<Phase>("intro");
   const moveTo = (next: Phase) => {
     phaseRef.current = next;
     setPhase(next);
@@ -58,23 +62,58 @@ const Component = ({ className }: Props): JSX.Element => {
     moveTo(reduceMotion ? "reveal" : "charging");
   };
   const reset = () => {
+    if (phaseRef.current === "collection") returnToReplay.current = true;
     drag.current = null;
     setProgress(0);
     setIndex(0);
-    moveTo("sealed");
+    moveTo("intro");
   };
+  const close = () => {
+    drag.current = null;
+    moveTo("collection");
+  };
+  const immersive = phase !== "collection";
+
+  // A native modal keeps background links inert and traps focus. Restore the
+  // exact scroll position/styles even when routing away or disabling the mode.
+  useEffect(() => {
+    if (!immersive) return;
+    const modal = dialog.current;
+    if (!modal) return;
+    const y = window.scrollY;
+    const body = document.body;
+    const original = {
+      position: body.style.position,
+      top: body.style.top,
+      width: body.style.width,
+      overflow: body.style.overflow,
+    };
+    body.style.position = "fixed";
+    body.style.top = `-${y}px`;
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+    modal.showModal();
+    closeButton.current?.focus({ preventScroll: true });
+    return () => {
+      modal.close();
+      Object.assign(body.style, original);
+      window.scrollTo(0, y);
+    };
+  }, [immersive]);
 
   // One timer per phase. Skipping, resetting, disabling the mode or navigating
   // away cancels it; repeated pointer/click events cannot start a second sequence.
   useEffect(() => {
-    if (phase !== "charging" && phase !== "burst") return;
+    if (phase !== "intro" && phase !== "charging" && phase !== "burst") return;
     const timer = window.setTimeout(
       () => {
-        const next = phase === "charging" ? "burst" : "reveal";
+        const next = phase === "intro" ? "sealed"
+          : phase === "charging" ? "burst" : "reveal";
         phaseRef.current = next;
         setPhase(next);
       },
-      reduceMotion ? 0 : phase === "charging" ? 360 : 900,
+      phase === "intro" ? (reduceMotion ? 800 : 2200)
+        : reduceMotion ? 0 : phase === "charging" ? 360 : 900,
     );
     return () => window.clearTimeout(timer);
   }, [phase, reduceMotion]);
@@ -90,7 +129,7 @@ const Component = ({ className }: Props): JSX.Element => {
       skipButton.current?.focus({ preventScroll: true });
     if (phase === "reveal") nextButton.current?.focus({ preventScroll: true });
     if (phase === "collection")
-      collectionTitle.current?.focus({ preventScroll: true });
+      (returnToReplay.current ? replayButton.current : collectionTitle.current)?.focus({ preventScroll: true });
     if (phase === "sealed") openButton.current?.focus({ preventScroll: true });
   }, [phase]);
 
@@ -148,12 +187,6 @@ const Component = ({ className }: Props): JSX.Element => {
       className={className}
       aria-label="作品カードパック"
       data-phase={phase}
-      onKeyDown={(event) => {
-        if (event.key === "Escape" && phase !== "sealed") {
-          event.preventDefault();
-          reset();
-        }
-      }}
     >
       <div className="packHeader">
         <p className="eyebrow">KOICHI’S WORKS / COLLECTION 01</p>
@@ -167,24 +200,43 @@ const Component = ({ className }: Props): JSX.Element => {
           枚の作品カード入り。すべてSSRのポートフォリオパック。
         </p>
       </div>
-      <p className="srOnly" role="status" aria-live="polite">
-        {phase === "sealed"
-          ? "パックの上の切り口を左右になぞるか、パックを開けるボタンを押してください。"
-          : phase === "reveal"
-            ? `SSR ${index + 1}枚目、全${worksData.length}枚。${work.title}`
-            : phase === "collection"
-              ? "すべての作品を表示しました。"
-              : "パックを開封しています。"}
-      </p>
       {phase !== "collection" ? (
-        <div className={`stage ${phase}`}>
+        <dialog
+          ref={dialog}
+          className={`stage ${phase}`}
+          aria-label="SSR作品パック開封"
+          onCancel={(event) => { event.preventDefault(); close(); }}
+        >
+          <p className="srOnly" role="status" aria-live="polite">
+            {phase === "intro" ? "SSR確定。すべての作品がスペシャルレア。" : phase === "sealed"
+              ? "パックの上の切り口を左右になぞるか、パックを開けるボタンを押してください。"
+              : phase === "reveal"
+                ? `SSR ${index + 1}枚目、全${worksData.length}枚。${work.title}`
+                : "パックを開封しています。"}
+          </p>
+          <div className="sceneControls">
+            <button ref={closeButton} onClick={close}>← 作品一覧に戻る</button>
+            <div>
+              <button onClick={toggleMute} aria-label={isMuted ? "音を出す" : "音を消す"}>{isMuted ? "音 OFF" : "音 ON"}</button>
+              <button onClick={disable}>正気に戻る</button>
+            </div>
+          </div>
           <div className="stageGrid" aria-hidden="true" />
           <div className="ambient" aria-hidden="true" />
           <div className="stageTop">
             <span>PORTFOLIO BOOSTER</span>
             <span>✦ ALL SSR</span>
           </div>
-          {phase !== "sealed" && (
+          {phase === "intro" && (
+            <div className="guarantee">
+              <div className="guaranteeLight" aria-hidden="true" />
+              <p>この出会いは、特別。</p>
+              <h2><span>SSR</span>確定</h2>
+              <p className="guaranteeCaption">{worksData.length} WORKS · ALL SPECIAL SUPER RARE</p>
+              <button className="primary" onClick={() => moveTo("sealed")}>パックへ進む →</button>
+            </div>
+          )}
+          {phase !== "intro" && phase !== "sealed" && (
             <button
               ref={skipButton}
               className="skip"
@@ -369,12 +421,12 @@ const Component = ({ className }: Props): JSX.Element => {
                 : "✦ COLLECTION UNLOCKED ✦"}
             </p>
           )}
-          {phase !== "sealed" && (
+          {phase !== "intro" && phase !== "sealed" && (
             <button className="reset" onClick={reset}>
               開封前に戻る
             </button>
           )}
-        </div>
+        </dialog>
       ) : (
         <div className="collection">
           <h4 ref={collectionTitle} tabIndex={-1}>
@@ -397,9 +449,10 @@ const Component = ({ className }: Props): JSX.Element => {
               </article>
             ))}
           </div>
-          <button className="primary" onClick={reset}>
+          <button ref={replayButton} className="primary" onClick={reset}>
             もう一度パックを開ける ↻
           </button>
+          <button className="normalWorks" onClick={disable}>通常の作品一覧に戻る</button>
         </div>
       )}
     </section>
@@ -449,16 +502,89 @@ const StyledComponent = styled(Component)`
     line-height: 1.8;
   }
   .stage {
-    position: relative;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    max-width: none;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    padding: calc(16px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
     isolation: isolate;
-    min-height: 640px;
-    overflow: hidden;
-    border-radius: 24px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 0;
     color: #f5f2ff;
     background: #100d21;
-    border: 1px solid #47345c;
-    box-shadow: 0 25px 70px #26114335;
+    border: 0;
   }
+  .stage::backdrop { background: #100d21; }
+  .sceneControls {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .sceneControls > div { display: flex; gap: 8px; }
+  .sceneControls button {
+    border: 1px solid #ffffff40;
+    border-radius: 99px;
+    padding: 9px 12px;
+    color: #eee6ff;
+    background: #100d21cc;
+    font-size: 11px;
+  }
+  .guarantee {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100dvh - 180px);
+    text-align: center;
+    isolation: isolate;
+  }
+  .guaranteeLight {
+    position: absolute;
+    z-index: -1;
+    width: min(75vw, 650px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: conic-gradient(from 45deg, transparent, #f6cf8355, transparent, #ed89e555, transparent, #f6cf8355, transparent);
+    filter: blur(24px);
+    animation: guaranteeLight 2.2s ease-out both;
+  }
+  .guarantee > p { color: #e2c5ef; letter-spacing: .22em; font-size: 12px; }
+  .guarantee h2 {
+    margin: 22px 0;
+    color: #ffebad;
+    font-size: clamp(58px, 13vw, 150px);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -.05em;
+    text-shadow: 0 0 40px #f0b25f80;
+    animation: guaranteeType 2.2s cubic-bezier(.16,1,.3,1) both;
+  }
+  .guarantee h2 span { display: block; font-size: 1.45em; font-style: italic; }
+  .guarantee .guaranteeCaption { font-size: 9px; letter-spacing: .18em; }
+  .guarantee .primary { margin-top: 26px; }
+  @keyframes guaranteeType {
+    0% { opacity: 0; transform: scale(.72); filter: blur(16px); }
+    24% { opacity: 1; transform: scale(.88); filter: blur(0); }
+    52% { transform: scale(.88); }
+    64%, 90% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.06); opacity: 0; }
+  }
+  @keyframes guaranteeLight {
+    0% { opacity: 0; transform: scale(.4) rotate(-30deg); }
+    55% { opacity: .4; }
+    70% { opacity: 1; transform: scale(1.2) rotate(20deg); }
+    100% { opacity: 0; transform: scale(1.6) rotate(40deg); }
+  }
+  .normalWorks { border: 0; background: transparent; text-decoration: underline; padding: 12px; }
   .stageGrid {
     position: absolute;
     inset: 0;
@@ -480,7 +606,7 @@ const StyledComponent = styled(Component)`
     display: flex;
     justify-content: space-between;
     gap: 12px;
-    padding: 24px;
+    padding: 18px 8px;
     font-size: 9px;
     letter-spacing: 0.14em;
     color: #c2b4d7;
@@ -785,7 +911,7 @@ const StyledComponent = styled(Component)`
   }
   .skip {
     position: absolute;
-    top: 52px;
+    top: calc(82px + env(safe-area-inset-top));
     right: 20px;
     z-index: 3;
     background: transparent;
@@ -981,6 +1107,21 @@ const StyledComponent = styled(Component)`
     .primary {
       padding: 12px 15px;
     }
+  }
+  @media (min-height: 800px) {
+    .packScene { margin-top: max(70px, calc((100dvh - 650px) / 2)); }
+    .revealScene { padding-top: max(45px, calc((100dvh - 740px) / 2)); }
+  }
+  @media (max-height: 720px) {
+    .packScene { margin-top: 35px; height: 300px; width: 215px; }
+    .packTitle { margin-top: 18px; font-size: 38px; }
+    .packCaption { margin-top: 9px; }
+    .packFooter { bottom: 20px; }
+    .openActions { margin-top: 38px; }
+    .revealScene { padding-top: 10px; }
+    .heroCard { max-width: 300px; }
+    .heroCard img { max-height: 140px; }
+    .revealActions { margin-top: 16px; }
   }
   @keyframes foil {
     0%,
