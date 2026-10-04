@@ -14,8 +14,8 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
     args: ["--no-sandbox"],
   });
   const errors = [];
-  async function setup(options = {}) {
-    const context = await browser.newContext({ viewport: {width:1280,height:1000}, ...options });
+  async function setup(options = {}, keepIntro = false) {
+    const context = await browser.newContext({ viewport: {width:1440,height:1000}, ...options });
     const page = await context.newPage();
     page.on("pageerror", error => errors.push(error.message));
     await page.goto(baseURL);
@@ -28,8 +28,7 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
     await phase(page,'intro');
     await cleanUI(page);
     await page.screenshot({path:path.join(out, `intro-${options.viewport?.width || 'desktop'}-${options.reducedMotion || 'normal'}.png`)});
-    await phase(page,'sealed');
-    await cleanUI(page);
+    if (!keepIntro) { await phase(page,'sealed'); await cleanUI(page); }
     return {context,page};
   }
   async function phase(page,value) {
@@ -42,6 +41,7 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   }
   async function cleanUI(page) {
     assert.deepEqual(await page.locator('dialog button').allTextContents(), ['正気に戻る']);
+    assert.equal(await page.locator('dialog .close').getAttribute('href'),'/');
     assert.equal(await page.locator('.sceneControls,.stageTop,.packHeader,.openFallback,.autoControls,.skip,.reset').count(),0);
     assert.equal(await page.locator('dialog').evaluate(el => el.matches(':modal')),true);
     assert.equal(await page.evaluate(() => document.body.style.position),'fixed');
@@ -104,6 +104,19 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   for(let i=1;i<4;i++) assert.ok(events[i].time-events[i-1].time >=850 && events[i].time-events[i-1].time <1350);
   assert.ok(events[4].time-events[3].time >=1000);
   assert.equal(await page.locator('.resultCard .workLink').count(),4);
+  async function checkColumns(page, columns) {
+    assert.equal(await page.locator('.resultCard').evaluateAll((cards, expected) => {
+      const bounds = cards.map(card=>card.getBoundingClientRect());
+      return bounds.slice(0,expected).every(rect=>Math.abs(rect.top-bounds[0].top)<1)
+        && (expected===4 || bounds[expected].top>bounds[0].top)
+        && cards.every(card=>Array.from(card.querySelectorAll('h4,p,a')).every(el=>el.scrollWidth<=el.clientWidth))
+        && document.querySelector('.sceneContent').scrollWidth<=document.querySelector('.sceneContent').clientWidth;
+    }, columns),true,'Responsive columns without horizontal overflow or clipped text');
+  }
+  await checkColumns(page,4);
+  await page.setViewportSize({width:1024,height:768});
+  await checkColumns(page,4);
+  await page.setViewportSize({width:1440,height:1000});
   await page.screenshot({path:path.join(out,'desktop-collection.png')});
   await page.keyboard.press('r');
   await phase(page,'sealed');
@@ -148,6 +161,7 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   await mobile.page.screenshot({path:path.join(out,'mobile-reveal.png')});
   await phase(mobile.page,'collection');
   await cleanUI(mobile.page);
+  await checkColumns(mobile.page,1);
   await mobile.page.locator('.sceneContent').evaluate(el => el.scrollTo(0,el.scrollHeight));
   await mobile.page.screenshot({path:path.join(out,'mobile-collection-bottom.png')});
   assert.equal(await mobile.page.evaluate(() => document.documentElement.scrollWidth<=innerWidth),true);
@@ -167,7 +181,22 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   assert.equal(await reduced.page.evaluate(()=>document.body.style.position),'');
   await reduced.context.close();
 
+  for (const target of ['intro','sealed','charging','burst','reveal','collection']) {
+    const exit = await setup({}, target==='intro');
+    if (!['intro','sealed'].includes(target)) {
+      await exit.page.keyboard.press('Enter');
+      await phase(exit.page,target);
+    }
+    await exit.page.locator('dialog .close').click();
+    await exit.page.waitForURL(baseURL+'/');
+    await exit.page.waitForTimeout(1500);
+    assert.equal(await exit.page.locator('dialog:modal').count(),0, `Top exit from ${target}`);
+    assert.equal(await exit.page.evaluate(()=>document.body.style.position),'');
+    assert.equal(await exit.page.getByRole('button',{name:'正気に戻る',exact:true}).count(),1,'Top exit preserves dopamine mode');
+    assert.equal(await exit.page.locator('.card img[alt="ロゴ"]').count(),1);
+    await exit.context.close();
+  }
   await browser.close();
   assert.deepEqual(errors,[],'No runtime errors');
-  console.log(`PASS: only bottom normal-mode button, no header/fallback/skip/pause UI; full-screen collection; swipe guide, four upward cards, 1000ms automatic sequence, keyboard pack/pause/replay, touch cancel, link pause, Escape cleanup, reduced motion and Back. Screenshots: ${out}`);
+  console.log(`PASS: top-left X returns to site top in all phases with mode preserved; desktop four-column cards; bottom normal-mode button, no header/fallback/skip/pause UI; full-screen collection; swipe guide, four upward cards, 1000ms automatic sequence, keyboard pack/pause/replay, touch cancel, link pause, Escape cleanup, reduced motion and Back. Screenshots: ${out}`);
 })().catch(error=>{console.error(error);process.exit(1);});

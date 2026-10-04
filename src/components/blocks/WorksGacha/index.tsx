@@ -3,7 +3,7 @@ import styled from "styled-components";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { TbHandFinger } from "react-icons/tb";
+import { TbHandFinger, TbX } from "react-icons/tb";
 import worksData, { WorksData } from "src/works";
 import { device } from "src/constants/breakpoints";
 import { DOPAMINE_CONTROLS_SAFE_AREA, useDopamineMode } from "src/contexts/DopamineMode";
@@ -233,6 +233,9 @@ const Component = ({ className }: Props): JSX.Element => {
             }
           }}
         >
+          <Link href="/" className="close" aria-label="トップページに戻る" onClick={stopAuto}>
+            <TbX size={24} />
+          </Link>
           <p className="srOnly" role="status" aria-live="polite">
             {phase === "intro" ? "SSR確定。すべての作品がスペシャルレア。" : phase === "sealed"
               ? "パックの切り口を左右になぞって開封。キーボードではパックにフォーカスしてEnterまたはスペース。"
@@ -510,6 +513,17 @@ const StyledComponent = styled(Component)`
     border: 0;
   }
   .stage::backdrop { background: #100d21; }
+  .close {
+    position: absolute;
+    top: calc(12px + env(safe-area-inset-top));
+    left: max(12px, env(safe-area-inset-left));
+    z-index: 5;
+    display: flex;
+    padding: 6px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.4);
+    color: #fff;
+  }
   .sceneContent {
     position: absolute;
     inset: 0 0 calc(${DOPAMINE_CONTROLS_SAFE_AREA}px + env(safe-area-inset-bottom));
@@ -1029,7 +1043,7 @@ const StyledComponent = styled(Component)`
   }
   .collection {
     max-width: 1000px;
-    margin: 16px auto 0;
+    margin: 44px auto 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1052,13 +1066,28 @@ const StyledComponent = styled(Component)`
   .resultCard {
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
   .resultCard .workLink {
     align-self: flex-start;
   }
   @media (${device.tablet}) {
     .grid {
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (${device.laptop}) {
+    .collection {
+      max-width: 1440px;
+    }
+    .grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .resultCard .workLink {
+      margin-top: auto;
+      padding-top: 16px;
     }
   }
   @media (max-width: 380px) {
