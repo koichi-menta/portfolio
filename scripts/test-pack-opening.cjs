@@ -31,8 +31,8 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
     if (!keepIntro) { await phase(page,'sealed'); await cleanUI(page); }
     return {context,page};
   }
-  async function phase(page,value) {
-    try { await page.locator(`section[data-phase="${value}"]`).waitFor(); }
+  async function phase(page,value,waitForLanding=true) {
+    try { await page.locator(`section[data-phase="${value}"]`).waitFor(); if(value==='collection'&&waitForLanding) await page.locator('.collection.settled').waitFor(); }
     catch(error) {
       console.error(await page.evaluate(() => ({phase:document.querySelector('section[data-phase]')?.dataset.phase,hidden:document.hidden,focus:document.activeElement?.tagName,status:Array.from(document.querySelectorAll('[role="status"]')).map(el=>el.textContent)})));
       await page.screenshot({path:path.join(out, 'timeout.png')});
@@ -44,6 +44,14 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
     assert.equal(await page.locator('dialog .close').getAttribute('href'),'/');
     assert.equal(await page.locator('.sceneControls,.stageTop,.packHeader,.openFallback,.autoControls,.skip,.reset').count(),0);
     assert.equal(await page.locator('dialog').evaluate(el => el.matches(':modal')),true);
+    if(await page.locator('.guarantee').count()) assert.equal(await page.locator('.guarantee h2 span').evaluate(el=>{
+      const style=getComputedStyle(el), canvas=document.createElement('canvas'), ctx=canvas.getContext('2d');
+      ctx.font=`${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      ctx.letterSpacing=style.letterSpacing;
+      const ink=ctx.measureText('SSR'), left=parseFloat(style.paddingLeft), right=parseFloat(style.paddingRight);
+      const origin=left+(el.clientWidth-left-right-ink.width)/2;
+      return right>=parseFloat(style.fontSize)*.17 && origin+ink.actualBoundingBoxRight < el.clientWidth && el.scrollWidth<=el.clientWidth;
+    }),true,'Italic SSR ink including R fits inside its painted box');
     if(await page.locator('.guarantee').count()) assert.equal(await page.locator('.guarantee').evaluate(el=>el.getBoundingClientRect().bottom===innerHeight),true,'SSR background continues behind the bottom button');
     assert.equal(await page.evaluate(() => document.body.style.position),'fixed');
     assert.equal(await page.locator('dialog').evaluate(el => {
@@ -78,6 +86,8 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   await page.evaluate(() => {
     window.packEvents=[];
     window.ssrEntrances=[];
+    window.collectionEntrances=[];
+    document.addEventListener('animationstart',e=>{ if(e.animationName==='collectionLand') window.collectionEntrances.push({time:performance.now(),title:e.target.querySelector('h4').textContent}); });
     document.addEventListener('animationstart',e=>{ if(e.animationName==='awardRays') window.ssrEntrances.push(document.querySelector('.heroCard h4')?.textContent); });
     new MutationObserver(() => {
       const phase = document.querySelector('section[data-phase]')?.dataset.phase;
@@ -113,6 +123,9 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   await phase(page,'collection');
   await cleanUI(page);
   const events = await page.evaluate(() => window.packEvents);
+  const landings=await page.evaluate(()=>window.collectionEntrances);
+  assert.equal(landings.length,4);
+  for(let i=1;i<4;i++) assert.ok(landings[i].time-landings[i-1].time>80 && landings[i].time-landings[i-1].time<450,JSON.stringify(landings));
   assert.equal(events.length,5);
   assert.equal(await page.evaluate(()=>new Set(window.ssrEntrances).size),4,'Every SSR replays its own full-screen entrance');
   assert.equal(new Set(events.slice(0,4).map(e=>e.title)).size,4);
@@ -145,6 +158,7 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
     await phase(page,'collection');
     assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('data-work')),slug,'Selected card focus returns');
   }
+  assert.equal(await page.evaluate(()=>window.collectionEntrances.length),4,'Detail back never replays collection entrances');
   await page.keyboard.press('r');
   await phase(page,'sealed');
   await page.keyboard.press('Space');
@@ -218,12 +232,12 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   assert.equal(await reduced.page.evaluate(()=>document.body.style.position),'');
   await reduced.context.close();
 
-  for (const target of ['intro','sealed','charging','burst','reveal','collection','detail']) {
+  for (const target of ['intro','sealed','charging','burst','reveal','collection','collection-landing','detail']) {
     console.log(`Checking top exit: ${target}`);
     const exit = await setup({}, target==='intro');
     if (!['intro','sealed'].includes(target)) {
       await exit.page.keyboard.press('Enter');
-      await phase(exit.page,target==='detail'?'collection':target);
+      await phase(exit.page,['detail','collection-landing'].includes(target)?'collection':target,target!=='collection-landing');
       if(target==='detail') { await exit.page.locator('.resultCard .workLink').first().click(); await phase(exit.page,'detail'); }
     }
     await exit.page.locator('dialog .close').click();

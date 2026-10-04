@@ -6,7 +6,7 @@ const assert=require('node:assert/strict');
   console.log(`Checking audio: muted=${muted}`);
   const page=await browser.newPage({viewport:{width:1440,height:1000}});
   await page.addInitScript(()=>{
-   window.audioProof={notes:[],launches:[],ends:[],stops:[]};
+   window.audioProof={notes:[],launches:[],ends:[],stops:[],landings:[]};
    const proto=AudioContext.prototype,create=proto.createOscillator;
    proto.createOscillator=function(){
     const node=create.call(this),start=node.start.bind(node),stop=node.stop.bind(node);
@@ -16,7 +16,7 @@ const assert=require('node:assert/strict');
     node.stop=(time)=>{window.audioProof.stops.push({frequency,remaining:time-this.currentTime,phase:document.querySelector('section[data-phase]')?.dataset.phase});return stop(time);};
     return node;
    };
-   document.addEventListener('animationstart',e=>{if(e.animationName==='cardLaunch') window.audioProof.launches.push(performance.now());},true);
+   document.addEventListener('animationstart',e=>{if(e.animationName==='cardLaunch') window.audioProof.launches.push(performance.now()); if(e.animationName==='collectionLand') window.audioProof.landings.push(performance.now());},true);
    document.addEventListener('animationend',e=>{if(e.animationName==='cardLaunch') window.audioProof.ends.push(e.target.getBoundingClientRect().bottom);},true);
   });
   console.log('Chrome context ready');
@@ -40,6 +40,15 @@ const assert=require('node:assert/strict');
    for(let i=1;i<4;i++) assert.ok(impacts[i].time-impacts[i-1].time>120 && impacts[i].time-impacts[i-1].time<250,'Sequential impacts');
   }
   await page.locator('section[data-phase="collection"]').waitFor();
+  await page.locator('.collection.settled').waitFor();
+  const collection=await page.evaluate(()=>window.audioProof);
+  const dons=collection.notes.filter(n=>n.phase==='collection'&&[90,95,100,105].includes(n.frequency));
+  assert.equal(dons.length,muted?0:4,'Four collection impacts respect mute');
+  if(!muted) dons.forEach((note,i)=>assert.ok(Math.abs(note.time-collection.landings[i])<25,'Collection landing and impact synchronize'));
+  await page.locator('.resultCard .workLink').first().click();
+  await page.locator('.detailFrame .actions button').click();
+  await page.waitForTimeout(1500);
+  assert.equal(await page.evaluate(()=>window.audioProof.notes.filter(n=>n.phase==='collection'&&[90,95,100,105].includes(n.frequency)).length),dons.length,'Returning from detail never replays impacts');
   assert.equal(await page.evaluate(()=>window.audioProof.notes.filter(n=>n.phase==='reveal' && n.frequency===85).length),muted?0:4,'Every SSR gets a dramatic sound cue');
   await page.keyboard.press('r');
   await page.locator('section[data-phase="intro"]').waitFor();

@@ -71,6 +71,10 @@ export const createWorksAudio = () => {
       tone(1568, 0.3, 0.035, 0.015);
       tone(2093, 0.25, 0.025, 0.04);
     },
+    collectionImpact: (index: number) => {
+      tone(90 + index * 5, 0.3, 0.4, 0, 35, "sine");
+      [1046.5, 1568].forEach((frequency, i) => tone(frequency, 0.4, 0.045, i * 0.035));
+    },
     reveal: (reducedMotion = false) => {
       if (reducedMotion) { tone(1046.5, 0.35, 0.08); tone(1568, 0.4, 0.06, 0.06); return; }
       [523.25, 659.25, 783.99].forEach((frequency, i) => tone(frequency, 0.28, 0.045, i * 0.05));

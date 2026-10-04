@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import Image from "next/image";
 import Link from "next/link";
@@ -11,6 +11,7 @@ import { createWorksAudio, playTick, unlock } from "src/lib/dopamineSound";
 import { WorkDetailContainer } from "src/components/container/WorkDetail";
 
 const LAUNCH_STAGGER_MS = 180;
+const COLLECTION_STAGGER_MS = 220;
 type Phase = "intro" | "sealed" | "charging" | "burst" | "reveal" | "collection" | "detail";
 type Drag = {
   id: number;
@@ -20,9 +21,9 @@ type Drag = {
   tick: number;
 };
 
-const WorkLink = ({ work, onDetail }: { work: WorksData; onDetail: () => void }): JSX.Element | null =>
+const WorkLink = ({ work, onDetail, disabled = false }: { work: WorksData; onDetail: () => void; disabled?: boolean }): JSX.Element | null =>
   work.detail ? (
-    <button className="workLink" data-work={work.slug} onClick={onDetail}>
+    <button className="workLink" data-work={work.slug} onClick={onDetail} disabled={disabled}>
       詳細を見る
     </button>
   ) : work.href ? (
@@ -61,10 +62,16 @@ const Component = ({ className }: Props): JSX.Element => {
   const detailFrame = useRef<HTMLDivElement>(null);
   const [detailIndex, setDetailIndex] = useState(0);
   const collectionRestore = useRef<{ scroll: number; slug: string } | null>(null);
-  const moveTo = (next: Phase) => {
+  const collectionHasPlayed = useRef(false);
+  const [celebrateCollection, setCelebrateCollection] = useState(false);
+  const moveTo = useCallback((next: Phase) => {
+    if (next === "collection") {
+      setCelebrateCollection(!collectionHasPlayed.current && !reduceMotion);
+      collectionHasPlayed.current = true;
+    }
     phaseRef.current = next;
     setPhase(next);
-  };
+  }, [reduceMotion]);
 
   const open = () => {
     if (phaseRef.current !== "sealed") return;
@@ -80,6 +87,8 @@ const Component = ({ className }: Props): JSX.Element => {
     audio.current.stop();
     collectionRestore.current = { scroll: phaseRef.current === "collection" ? sceneContent.current?.scrollTop || 0 : 0,
       slug: worksData[selected].slug };
+    collectionHasPlayed.current = true;
+    setCelebrateCollection(false);
     setDetailIndex(selected);
     moveTo("detail");
   };
@@ -97,6 +106,8 @@ const Component = ({ className }: Props): JSX.Element => {
     setLinkFocused(false);
     setProgress(0);
     setIndex(0);
+    collectionHasPlayed.current = false;
+    setCelebrateCollection(false);
     moveTo("intro");
   };
   // A native modal keeps background links inert and traps focus. Restore the
@@ -153,7 +164,7 @@ const Component = ({ className }: Props): JSX.Element => {
       else moveTo("collection");
     }, reduceMotion ? 1400 : 2000);
     return () => window.clearTimeout(autoTimer.current);
-  }, [phase, index, paused, reduceMotion]);
+  }, [phase, index, paused, reduceMotion, moveTo]);
 
   useEffect(() => {
     const visibility = () => {
@@ -175,6 +186,9 @@ const Component = ({ className }: Props): JSX.Element => {
     if (phase === "reveal") sceneAudio.reveal(Boolean(reduceMotion));
     return () => sceneAudio.stop();
   }, [phase, index, isMuted, pageHidden, reduceMotion]);
+  useEffect(() => {
+    if (reduceMotion) setCelebrateCollection(false);
+  }, [reduceMotion]);
   useEffect(() => {
     const sceneAudio = audio.current;
     return () => sceneAudio.stop();
@@ -481,7 +495,7 @@ const Component = ({ className }: Props): JSX.Element => {
             </p>
           )}
           {phase === "collection" && (
-        <div className="collection">
+        <div className={`collection ${celebrateCollection ? "celebrating" : "settled"}`}>
           <h4 ref={collectionTitle} tabIndex={-1}>
             COLLECTION COMPLETE{" "}
             <span>
@@ -490,7 +504,18 @@ const Component = ({ className }: Props): JSX.Element => {
           </h4>
           <div className="grid">
             {worksData.map((item, i) => (
-              <article className="resultCard" key={item.slug}>
+              <article className="resultCard" key={item.slug}
+                style={{ "--land-delay": `${i * COLLECTION_STAGGER_MS}ms` } as React.CSSProperties}
+                onAnimationStart={(event) => {
+                  if (event.animationName === "collectionLand" && celebrateCollection && !isMuted && !document.hidden) audio.current.collectionImpact(i);
+                }}
+                onAnimationEnd={(event) => {
+                  if (event.animationName === "collectionLand" && i === worksData.length - 1 && phaseRef.current === "collection") setCelebrateCollection(false);
+                }}
+              >
+                {celebrateCollection && <div className="collectionGlitter" aria-hidden="true">
+                  {Array.from({ length: 12 }, (_, j) => <i key={j} style={{ left: `${8 + (j * 29) % 84}%`, top: `${7 + (j * 37) % 86}%`, "--spark-delay": `${j % 3 * 50}ms` } as React.CSSProperties}>✦</i>)}
+                </div>}
                 <div className="cardMeta">
                   <b>SSR ✦</b>
                   <span>No. {String(i + 1).padStart(2, "0")}</span>
@@ -498,7 +523,7 @@ const Component = ({ className }: Props): JSX.Element => {
                 <Image src={item.src} width={500} height={300} alt="" />
                 <h4>{item.title}</h4>
                 <p>{item.description}</p>
-                <WorkLink work={item} onDetail={() => showDetail(i)} />
+                <WorkLink work={item} onDetail={() => showDetail(i)} disabled={celebrateCollection} />
               </article>
             ))}
           </div>
@@ -637,6 +662,7 @@ const StyledComponent = styled(Component)`
   .guarantee > p { color: #e2c5ef; letter-spacing: .22em; font-size: 12px; }
   .guarantee h2 {
     margin: 22px 0;
+    padding: .04em .12em .08em;
     color: #ffebad;
     background: linear-gradient(115deg, #fff3a6, #ffa8e6, #a1efff, #bdffaa, #ffe8a2);
     background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
@@ -647,7 +673,7 @@ const StyledComponent = styled(Component)`
     text-shadow: 0 0 40px #f0b25f80;
     animation: guaranteeType 2.2s cubic-bezier(.16,1,.3,1) both;
   }
-  .guarantee h2 span { display: block; font-size: 1.45em; font-style: italic; }
+  .guarantee h2 span { display: block; padding-inline: .08em .18em; font-size: 1.45em; font-style: italic; }
   .guarantee .guaranteeCaption { font-size: 9px; letter-spacing: .18em; }
   @keyframes guaranteeType {
     0% { opacity: 0; transform: scale(.72); filter: blur(16px); }
@@ -1155,6 +1181,25 @@ const StyledComponent = styled(Component)`
     min-width: 0;
     overflow-wrap: anywhere;
   }
+  .celebrating .resultCard {
+    transform-origin: 50% 65%;
+    animation: collectionLand .75s var(--land-delay) cubic-bezier(.16,1,.3,1) both;
+  }
+  .celebrating .resultCard::after {
+    content: ""; position: absolute; inset: -70%; pointer-events: none;
+    background: linear-gradient(115deg, transparent 35%, #f9c5ff66 43%, #ffffcf88 48%, #a2fff177 53%, transparent 63%);
+    animation: collectionFoil .7s var(--land-delay) ease-out both;
+  }
+  .collectionGlitter { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+  .collectionGlitter i { position: absolute; font-size: 22px; font-style: normal; color: #fff2bb; text-shadow: 0 0 15px #ffd0ef; animation: collectionSpark .6s calc(var(--land-delay) + var(--spark-delay)) ease-out both; }
+  @keyframes collectionLand {
+    0% { opacity: 0; transform: translateY(-100px) scale(.6) rotate(-7deg); filter: brightness(1.8); }
+    45% { opacity: 1; transform: translateY(8px) scale(1.06) rotate(2deg); filter: brightness(1.35); box-shadow: 0 0 65px #fbd49a88; }
+    70% { transform: translateY(-5px) scale(.98) rotate(-1deg); }
+    100% { opacity: 1; transform: none; filter: none; }
+  }
+  @keyframes collectionFoil { from { opacity: 0; transform: translateX(-60%) rotate(-10deg); } 35% { opacity: 1; } to { opacity: 0; transform: translateX(60%) rotate(10deg); } }
+  @keyframes collectionSpark { from { opacity: 0; transform: scale(.2); } 35% { opacity: 1; transform: scale(1.3); } to { opacity: 0; transform: translateY(-35px) scale(.4); } }
   .resultCard .workLink {
     align-self: flex-start;
   }
@@ -1271,7 +1316,7 @@ const StyledComponent = styled(Component)`
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .introStars, .rainbowRays, .launchGlitter, .revealAtmosphere { display: none; }
+    .introStars, .rainbowRays, .launchGlitter, .revealAtmosphere, .collectionGlitter { display: none; }
     *,
     *::before,
     *::after {
