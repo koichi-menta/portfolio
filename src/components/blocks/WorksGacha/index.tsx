@@ -7,9 +7,11 @@ import { TbHandFinger, TbX } from "react-icons/tb";
 import worksData, { WorksData } from "src/works";
 import { device } from "src/constants/breakpoints";
 import { DOPAMINE_CONTROLS_SAFE_AREA, useDopamineMode } from "src/contexts/DopamineMode";
-import { playPop, playReveal, playTick, unlock } from "src/lib/dopamineSound";
+import { createWorksAudio, playTick, unlock } from "src/lib/dopamineSound";
+import { WorkDetailContainer } from "src/components/container/WorkDetail";
 
-type Phase = "intro" | "sealed" | "charging" | "burst" | "reveal" | "collection";
+const LAUNCH_STAGGER_MS = 180;
+type Phase = "intro" | "sealed" | "charging" | "burst" | "reveal" | "collection" | "detail";
 type Drag = {
   id: number;
   startX: number;
@@ -18,11 +20,11 @@ type Drag = {
   tick: number;
 };
 
-const WorkLink = ({ work }: { work: WorksData }): JSX.Element | null =>
+const WorkLink = ({ work, onDetail }: { work: WorksData; onDetail: () => void }): JSX.Element | null =>
   work.detail ? (
-    <Link className="workLink" href={`/works/${work.slug}`}>
-      詳細を見る ↗
-    </Link>
+    <button className="workLink" data-work={work.slug} onClick={onDetail}>
+      詳細を見る
+    </button>
   ) : work.href ? (
     <a className="workLink" target="_blank" rel="noreferrer" href={work.href}>
       サイトを見る ↗
@@ -55,6 +57,10 @@ const Component = ({ className }: Props): JSX.Element => {
   const packElement = useRef<HTMLDivElement>(null);
   const collectionTitle = useRef<HTMLHeadingElement>(null);
   const previousPhase = useRef<Phase>("intro");
+  const audio = useRef(createWorksAudio());
+  const detailFrame = useRef<HTMLDivElement>(null);
+  const [detailIndex, setDetailIndex] = useState(0);
+  const collectionRestore = useRef<{ scroll: number; slug: string } | null>(null);
   const moveTo = (next: Phase) => {
     phaseRef.current = next;
     setPhase(next);
@@ -66,12 +72,25 @@ const Component = ({ className }: Props): JSX.Element => {
     setIsDragging(false);
     setProgress(1);
     unlock();
-    if (!isMuted) playPop();
     moveTo(reduceMotion ? "reveal" : "charging");
+  };
+  const showDetail = (selected: number) => {
+    if (phaseRef.current !== "collection" && phaseRef.current !== "reveal") return;
+    stopAuto();
+    audio.current.stop();
+    collectionRestore.current = { scroll: phaseRef.current === "collection" ? sceneContent.current?.scrollTop || 0 : 0,
+      slug: worksData[selected].slug };
+    setDetailIndex(selected);
+    moveTo("detail");
+  };
+  const backToCollection = () => {
+    if (phaseRef.current !== "detail") return;
+    moveTo("collection");
   };
   const reset = () => {
     drag.current = null;
     stopAuto();
+    audio.current.stop();
     setIsDragging(false);
     setManualPause(false);
     setLinkHovered(false);
@@ -106,7 +125,8 @@ const Component = ({ className }: Props): JSX.Element => {
     };
   }, []);
 
-  // One timer per phase. Skipping, resetting, disabling the mode or navigating
+  // Intro and charging timers; burst advances on the final CSS animation end.
+  // Its timeout is only a fallback. Resetting, disabling the mode or navigating
   // away cancels it; repeated pointer/click events cannot start a second sequence.
   useEffect(() => {
     if (phase !== "intro" && phase !== "charging" && phase !== "burst") return;
@@ -118,7 +138,7 @@ const Component = ({ className }: Props): JSX.Element => {
         setPhase(next);
       },
       phase === "intro" ? (reduceMotion ? 800 : 2200)
-        : reduceMotion ? 0 : phase === "charging" ? 360 : 1100,
+        : reduceMotion ? 0 : phase === "charging" ? 360 : 5000,
     );
     return () => window.clearTimeout(timer);
   }, [phase, reduceMotion]);
@@ -138,6 +158,7 @@ const Component = ({ className }: Props): JSX.Element => {
   useEffect(() => {
     const visibility = () => {
       stopAuto();
+      if (document.hidden) audio.current.stop();
       setPageHidden(document.hidden);
     };
     document.addEventListener("visibilitychange", visibility);
@@ -148,17 +169,29 @@ const Component = ({ className }: Props): JSX.Element => {
   }, []);
 
   useEffect(() => {
-    if (phase === "reveal" && !isMuted) playReveal();
-  }, [phase, index, isMuted]);
+    const sceneAudio = audio.current;
+    if (isMuted || pageHidden) { sceneAudio.stop(); return; }
+    if (phase === "intro") sceneAudio.guarantee();
+    if (phase === "reveal") sceneAudio.reveal();
+    return () => sceneAudio.stop();
+  }, [phase, index, isMuted, pageHidden]);
+  useEffect(() => {
+    const sceneAudio = audio.current;
+    return () => sceneAudio.stop();
+  }, []);
 
   useEffect(() => {
     if (phase === previousPhase.current) return;
     previousPhase.current = phase;
     if (phase === "reveal") revealTitle.current?.focus({ preventScroll: true });
     if (phase === "collection") {
-      sceneContent.current?.scrollTo(0, 0);
-      collectionTitle.current?.focus({ preventScroll: true });
+      const restore = collectionRestore.current;
+      sceneContent.current?.scrollTo(0, restore?.scroll || 0);
+      if (restore) sceneContent.current?.querySelector<HTMLButtonElement>(`[data-work="${restore.slug}"]`)?.focus({ preventScroll: true });
+      else collectionTitle.current?.focus({ preventScroll: true });
+      collectionRestore.current = null;
     }
+    if (phase === "detail") { sceneContent.current?.scrollTo(0, 0); detailFrame.current?.focus({ preventScroll: true }); }
     if (phase === "sealed") packElement.current?.focus({ preventScroll: true });
   }, [phase]);
 
@@ -211,6 +244,7 @@ const Component = ({ className }: Props): JSX.Element => {
     if (phaseRef.current === "sealed") setProgress(0);
   };
   const work = worksData[index];
+  const detailWork = worksData[detailIndex];
   const opened = phase === "burst";
 
   return (
@@ -223,7 +257,7 @@ const Component = ({ className }: Props): JSX.Element => {
           ref={dialog}
           className={`stage phase-${phase}`}
           aria-label="SSR作品パック開封"
-          onCancel={(event) => { event.preventDefault(); disable(); }}
+          onCancel={(event) => { event.preventDefault(); if (phaseRef.current === "detail") backToCollection(); else disable(); }}
           onKeyDown={(event) => {
             if (event.repeat) return;
             if (event.key.toLowerCase() === "r" && phase === "collection") reset();
@@ -241,6 +275,7 @@ const Component = ({ className }: Props): JSX.Element => {
               ? "パックの切り口を左右になぞって開封。キーボードではパックにフォーカスしてEnterまたはスペース。"
               : phase === "reveal"
                 ? `SSR ${index + 1}枚目、全${worksData.length}枚。${work.title}`
+                : phase === "detail" ? `${detailWork.title}の詳細。戻ると開封済みの作品一覧です。`
                 : phase === "collection" ? "すべての作品を表示しました。Rキーで再開封できます。" : "パックを開封しています。"}
           </p>
           <div className="stageGrid" aria-hidden="true" />
@@ -249,6 +284,10 @@ const Component = ({ className }: Props): JSX.Element => {
           {phase === "intro" && (
             <div className="guarantee">
               <div className="guaranteeLight" aria-hidden="true" />
+              <div className="rainbowRays" aria-hidden="true" />
+              <div className="introStars" aria-hidden="true">
+                {Array.from({ length: 24 }, (_, i) => <i key={i} style={{ "--star-x": `${7 + (i * 37) % 86}%`, "--star-y": `${6 + (i * 23) % 85}%`, animationDelay: `${(i % 6) * 0.16}s` } as React.CSSProperties}>✦</i>)}
+              </div>
               <p>この出会いは、特別。</p>
               <h2><span>SSR</span>確定</h2>
               <p className="guaranteeCaption">{worksData.length} WORKS · ALL SPECIAL SUPER RARE</p>
@@ -267,12 +306,17 @@ const Component = ({ className }: Props): JSX.Element => {
                       className="flyingCard"
                       style={
                         {
-                          "--fan-x": `${(i - (worksData.length - 1) / 2) * 52}px`,
-                          "--fan-y": `${-210 - i * 26}px`,
+                          "--fan-x": `${(i - (worksData.length - 1) / 2) * 44}px`,
                           "--fan-angle": `${(i - (worksData.length - 1) / 2) * 11}deg`,
-                          animationDelay: `${i * 55}ms`,
+                          animationDelay: `${i * LAUNCH_STAGGER_MS}ms`,
                         } as React.CSSProperties
                       }
+                      onAnimationEnd={(event) => {
+                        if (event.animationName === "cardLaunch" && i === worksData.length - 1 && phaseRef.current === "burst") moveTo("reveal");
+                      }}
+                      onAnimationStart={(event) => {
+                        if (event.animationName === "cardLaunch" && !isMuted && !document.hidden) audio.current.impact(i);
+                      }}
                     >
                       <span>✦</span>
                       <small>
@@ -280,6 +324,9 @@ const Component = ({ className }: Props): JSX.Element => {
                         <br />
                         WORKS
                       </small>
+                      <div className="launchGlitter">
+                        {Array.from({ length: 8 }, (_, j) => <i key={j} style={{ "--spark-x": `${(j % 2 ? 1 : -1) * (26 + j * 9)}px`, "--spark-y": `${70 + j * 24}px`, animationDelay: `${i * LAUNCH_STAGGER_MS + j * 35}ms` } as React.CSSProperties}>✦</i>)}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -411,7 +458,7 @@ const Component = ({ className }: Props): JSX.Element => {
                     onBlur={() => setLinkFocused(false)}
                     onPointerDown={() => { stopAuto(); setManualPause(true); }}
                   >
-                    <WorkLink work={work} />
+                    <WorkLink work={work} onDetail={() => showDetail(index)} />
                   </span>
                   <div className="cardShine" aria-hidden="true" />
                 </motion.article>
@@ -454,11 +501,16 @@ const Component = ({ className }: Props): JSX.Element => {
                 <Image src={item.src} width={500} height={300} alt="" />
                 <h4>{item.title}</h4>
                 <p>{item.description}</p>
-                <WorkLink work={item} />
+                <WorkLink work={item} onDetail={() => showDetail(i)} />
               </article>
             ))}
           </div>
         </div>
+          )}
+          {phase === "detail" && detailWork.detail && (
+            <div className="detailFrame" ref={detailFrame} tabIndex={-1} aria-label={`${detailWork.title}の詳細`}>
+              <WorkDetailContainer work={{ ...detailWork, detail: detailWork.detail }} onBack={backToCollection} />
+            </div>
           )}
           </div>
           <div className="bottomControls">
@@ -573,10 +625,21 @@ const StyledComponent = styled(Component)`
     filter: blur(24px);
     animation: guaranteeLight 2.2s ease-out both;
   }
+  .rainbowRays {
+    position: absolute; z-index: -1; width: min(120vw, 1050px); aspect-ratio: 1;
+    background: repeating-conic-gradient(from 20deg, #ffa8df44 0deg 8deg, transparent 8deg 20deg, #9affea44 20deg 28deg, transparent 28deg 40deg);
+    mask-image: radial-gradient(transparent 5%, #000 25%, transparent 68%);
+    animation: guaranteeLight 2.2s ease-out both;
+  }
+  .introStars { position: absolute; inset: 0; pointer-events: none; }
+  .introStars i { position: absolute; left: var(--star-x); top: var(--star-y); color: #ffefba; font-size: clamp(12px, 2vw, 25px); font-style: normal; text-shadow: 0 0 16px #f9b7ff; animation: introStar 1.6s ease-out both; }
+  @keyframes introStar { 0% { opacity: 0; transform: scale(.1); } 45% { opacity: .8; transform: scale(1); } 100% { opacity: 0; transform: translateY(-30px) scale(.3); } }
   .guarantee > p { color: #e2c5ef; letter-spacing: .22em; font-size: 12px; }
   .guarantee h2 {
     margin: 22px 0;
     color: #ffebad;
+    background: linear-gradient(115deg, #fff3a6, #ffa8e6, #a1efff, #bdffaa, #ffe8a2);
+    background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     font-size: clamp(58px, 13vw, 150px);
     font-weight: 900;
     line-height: 1;
@@ -899,7 +962,7 @@ const StyledComponent = styled(Component)`
     align-items: center;
     justify-content: center;
     box-shadow: 0 0 20px #f1c88955;
-    animation: cardBurst 0.85s cubic-bezier(0.1, 0.8, 0.2, 1) both;
+    animation: cardLaunch .9s cubic-bezier(.4, 0, .8, .5) both;
   }
   .flyingCard span {
     color: #f1d49a;
@@ -1011,6 +1074,8 @@ const StyledComponent = styled(Component)`
     font-size: 12px;
     color: #f3dcae;
   }
+  button.workLink { border: 0; background: transparent; padding: 0; text-decoration: underline; cursor: pointer; }
+  .detailFrame { margin: 44px auto 24px; width: 100%; outline-offset: -2px; }
   .cardShine {
     position: absolute;
     pointer-events: none;
@@ -1156,24 +1221,23 @@ const StyledComponent = styled(Component)`
       opacity: 0;
     }
   }
-  @keyframes cardBurst {
-    0% {
-      transform: translateY(70px) scale(0.75);
-      opacity: 0;
-    }
-    12% {
-      opacity: 1;
-    }
-    85% {
-      transform: translate(var(--fan-x), var(--fan-y)) rotate(var(--fan-angle)) scale(0.86);
-      opacity: 1;
-    }
-    100% {
-      transform: translate(var(--fan-x), var(--fan-y)) rotate(var(--fan-angle))
-        scale(0.86);
-      opacity: 0;
-    }
+  @keyframes cardLaunch {
+    0% { transform: translateY(70px) scale(.75); opacity: 0; }
+    12% { opacity: 1; }
+    100% { transform: translate(var(--fan-x), calc(-100dvh - 400px)) rotate(var(--fan-angle)) scale(1.1); opacity: 1; }
   }
+  .flyingCard::after {
+    content: ""; position: absolute; top: 100%; width: 70%; height: 250px;
+    background: linear-gradient(#f7dfb599, #a0f6e333, transparent);
+    filter: blur(10px); pointer-events: none;
+  }
+  .launchGlitter { position: absolute; inset: 0; pointer-events: none; }
+  .launchGlitter i {
+    position: absolute; left: calc(50% + var(--spark-x)); top: calc(100% + var(--spark-y));
+    color: #fff3ba; font-size: 15px; font-style: normal; text-shadow: 0 0 12px #b9fbef;
+    animation: launchSpark .7s ease-out both;
+  }
+  @keyframes launchSpark { from { opacity: 0; transform: scale(.3); } 25% { opacity: 1; } to { opacity: .2; transform: translateY(90px) scale(.5); } }
   @keyframes halo {
     to {
       transform: rotate(360deg);
@@ -1185,6 +1249,7 @@ const StyledComponent = styled(Component)`
     }
   }
   @media (prefers-reduced-motion: reduce) {
+    .introStars, .rainbowRays, .launchGlitter { display: none; }
     *,
     *::before,
     *::after {

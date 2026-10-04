@@ -24,7 +24,7 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
     await page.getByRole('button',{name:'音を消す',exact:true}).click();
     await logo.click();
     await page.waitForTimeout(600);
-    await page.locator('a[href="/works"]').click({force:true});
+    await page.locator('a[href="/works"]').click();
     await phase(page,'intro');
     await cleanUI(page);
     await page.screenshot({path:path.join(out, `intro-${options.viewport?.width || 'desktop'}-${options.reducedMotion || 'normal'}.png`)});
@@ -40,7 +40,7 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
     }
   }
   async function cleanUI(page) {
-    assert.deepEqual(await page.locator('dialog button').allTextContents(), ['正気に戻る']);
+    assert.deepEqual(await page.locator('dialog button:not(.workLink)').allTextContents(), ['正気に戻る']);
     assert.equal(await page.locator('dialog .close').getAttribute('href'),'/');
     assert.equal(await page.locator('.sceneControls,.stageTop,.packHeader,.openFallback,.autoControls,.skip,.reset').count(),0);
     assert.equal(await page.locator('dialog').evaluate(el => el.matches(':modal')),true);
@@ -59,6 +59,7 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
     assert.equal(await page.evaluate(() => document.body.style.position),'');
     assert.equal(await page.locator('a[href^="/works/"]').count(),4);
   }
+  console.log('Checking desktop pack and embedded details');
   const desktop = await setup();
   const {page} = desktop;
   await page.screenshot({path:path.join(out,'desktop-sealed.png')});
@@ -81,19 +82,26 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
       if(title && window.packEvents.at(-1)?.title !== title) window.packEvents.push({title,time:performance.now()});
     }).observe(document.body,{subtree:true,childList:true,attributes:true});
   });
+  await page.evaluate(() => {
+    window.launchEnds=[];
+    document.addEventListener('animationend',event=>{
+      if(event.animationName==='cardLaunch') window.launchEnds.push(event.target.getBoundingClientRect().bottom);
+    },true);
+  });
   await page.mouse.move(x,y);
   await page.mouse.down();
   await page.mouse.move(x+125,y,{steps:8});
   await page.mouse.up();
   await phase(page,'burst');
   assert.equal(await page.locator('.flyingCard').count(),4);
-  await page.waitForTimeout(300);
-  await page.screenshot({path:path.join(out,'desktop-burst.png')});
+  await page.waitForTimeout(800);
   assert.equal(await page.locator('.flyingCard').evaluateAll(cards => {
     const origin = document.querySelector('.packScene').getBoundingClientRect().top;
     return cards.every(card => card.getBoundingClientRect().top < origin);
   }),true,'All four cards launch above the pack');
   await phase(page,'reveal');
+  assert.equal(await page.evaluate(()=>window.launchEnds.length),4,'Every launch finishes before reveal');
+  assert.equal(await page.evaluate(()=>window.launchEnds.every(bottom=>bottom<0)),true,'Every card crosses the viewport top');
   await cleanUI(page);
   await page.mouse.move(5,5);
   await phase(page,'collection');
@@ -109,7 +117,7 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
       const bounds = cards.map(card=>card.getBoundingClientRect());
       return bounds.slice(0,expected).every(rect=>Math.abs(rect.top-bounds[0].top)<1)
         && (expected===4 || bounds[expected].top>bounds[0].top)
-        && cards.every(card=>Array.from(card.querySelectorAll('h4,p,a')).every(el=>el.scrollWidth<=el.clientWidth))
+        && cards.every(card=>Array.from(card.querySelectorAll('h4,p,a,button.workLink')).every(el=>el.scrollWidth<=el.clientWidth))
         && document.querySelector('.sceneContent').scrollWidth<=document.querySelector('.sceneContent').clientWidth;
     }, columns),true,'Responsive columns without horizontal overflow or clipped text');
   }
@@ -118,6 +126,18 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   await checkColumns(page,4);
   await page.setViewportSize({width:1440,height:1000});
   await page.screenshot({path:path.join(out,'desktop-collection.png')});
+  for(let i=0;i<4;i++) {
+    const link = page.locator('.resultCard .workLink').nth(i);
+    const slug = await link.getAttribute('data-work');
+    const url = page.url();
+    await link.click();
+    await phase(page,'detail');
+    assert.equal(page.url(), url, 'Embedded detail never navigates');
+    for(const heading of ['概要','技術スタック']) assert.equal(await page.locator('.detailFrame').getByRole('heading',{name:heading,exact:true}).count(),1);
+    await page.locator('.detailFrame .actions button').click();
+    await phase(page,'collection');
+    assert.equal(await page.evaluate(()=>document.activeElement?.getAttribute('data-work')),slug,'Selected card focus returns');
+  }
   await page.keyboard.press('r');
   await phase(page,'sealed');
   await page.keyboard.press('Space');
@@ -144,6 +164,7 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   await normal(canceled.page);
   await canceled.context.close();
 
+  console.log('Checking mobile and reduced motion');
   const mobile = await setup({viewport:{width:320,height:640},isMobile:true,hasTouch:true,deviceScaleFactor:2});
   await mobile.page.screenshot({path:path.join(out,'mobile-sealed.png')});
   const b=await mobile.page.locator('.tearZone').boundingBox();
@@ -165,7 +186,15 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   await mobile.page.locator('.sceneContent').evaluate(el => el.scrollTo(0,el.scrollHeight));
   await mobile.page.screenshot({path:path.join(out,'mobile-collection-bottom.png')});
   assert.equal(await mobile.page.evaluate(() => document.documentElement.scrollWidth<=innerWidth),true);
-  await mobile.page.locator('dialog button').click();
+  const savedScroll = await mobile.page.locator('.sceneContent').evaluate(el=>el.scrollTop);
+  await mobile.page.locator('.resultCard .workLink').last().click();
+  await phase(mobile.page,'detail');
+  assert.equal(await mobile.page.locator('.sceneContent').evaluate(el=>el.scrollTop),0);
+  await mobile.page.screenshot({path:path.join(out,'mobile-detail.png')});
+  await mobile.page.keyboard.press('Escape');
+  await phase(mobile.page,'collection');
+  assert.ok(Math.abs(await mobile.page.locator('.sceneContent').evaluate(el=>el.scrollTop)-savedScroll)<2,'Mobile collection scroll restores');
+  await mobile.page.locator('dialog').getByRole('button',{name:'正気に戻る',exact:true}).click();
   await normal(mobile.page);
   await mobile.context.close();
 
@@ -181,11 +210,13 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   assert.equal(await reduced.page.evaluate(()=>document.body.style.position),'');
   await reduced.context.close();
 
-  for (const target of ['intro','sealed','charging','burst','reveal','collection']) {
+  for (const target of ['intro','sealed','charging','burst','reveal','collection','detail']) {
+    console.log(`Checking top exit: ${target}`);
     const exit = await setup({}, target==='intro');
     if (!['intro','sealed'].includes(target)) {
       await exit.page.keyboard.press('Enter');
-      await phase(exit.page,target);
+      await phase(exit.page,target==='detail'?'collection':target);
+      if(target==='detail') { await exit.page.locator('.resultCard .workLink').first().click(); await phase(exit.page,'detail'); }
     }
     await exit.page.locator('dialog .close').click();
     await exit.page.waitForURL(baseURL+'/');

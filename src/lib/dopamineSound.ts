@@ -34,6 +34,55 @@ const noiseBuffer = (ctx: AudioContext, seconds: number): AudioBuffer => {
   return buffer;
 };
 
+// A works scene owns its voices so leaving, muting or canceling that scene
+// stops even notes scheduled for later without closing the shared AudioContext.
+export const createWorksAudio = () => {
+  const voices = new Set<{ source: OscillatorNode; gain: GainNode }>();
+  const tone = (frequency: number, duration: number, volume: number, delay = 0,
+    endFrequency?: number, type: OscillatorType = "triangle") => {
+    const nodes = getNodes();
+    if (!nodes) return;
+    const { ctx, out } = nodes;
+    const start = ctx.currentTime + delay;
+    const source = ctx.createOscillator();
+    const gain = ctx.createGain();
+    source.type = type;
+    source.frequency.setValueAtTime(frequency, start);
+    if (endFrequency) source.frequency.exponentialRampToValueAtTime(endFrequency, start + duration);
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(volume, start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+    source.connect(gain).connect(out);
+    const voice = { source, gain };
+    voices.add(voice);
+    source.onended = () => { source.disconnect(); gain.disconnect(); voices.delete(voice); };
+    source.start(start);
+    source.stop(start + duration);
+  };
+  return {
+    guarantee: () => {
+      [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((frequency, i) =>
+        tone(frequency, 0.7, 0.1, i * 0.12));
+      tone(110, 0.55, 0.22, 0.58, 55, "sine");
+    },
+    impact: (index: number) => {
+      tone(120 + index * 7, 0.22, 0.45, 0, 42, "sine");
+      tone(1568, 0.3, 0.035, 0.015);
+      tone(2093, 0.25, 0.025, 0.04);
+    },
+    reveal: () => { tone(1046.5, 0.35, 0.08); tone(1568, 0.4, 0.06, 0.06); },
+    stop: () => {
+      voices.forEach(({ source, gain }) => {
+        const now = source.context.currentTime;
+        gain.gain.cancelScheduledValues(now);
+        gain.gain.setTargetAtTime(0, now, 0.008);
+        source.stop(now + 0.03);
+      });
+    },
+  };
+};
+
 // 低音が「ズン」と沈むキック
 export const playKick = (): void => {
   const nodes = getNodes();

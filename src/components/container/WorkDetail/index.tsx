@@ -1,5 +1,5 @@
 import React from "react";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
 import Image from "next/image";
 import Link from "next/link";
 import { TbChevronLeft } from "react-icons/tb";
@@ -10,17 +10,18 @@ import { device } from "src/constants/breakpoints";
 
 export type ContainerProps = {
   work: WorksData & { detail: WorkDetail };
+  onBack?: () => void;
 };
 type Props = {
   className?: string;
 } & ContainerProps;
 
-const Component = ({ className, work }: Props): JSX.Element => (
+const Component = ({ className, work, onBack }: Props): JSX.Element => (
   <div className={className}>
     <div className="title">
-      <Link className="back" href="/works" aria-label="作品一覧に戻る">
+      {onBack ? <button className="back" onClick={onBack} aria-label="作品一覧に戻る"><TbChevronLeft size={28} /></button> : <Link className="back" href="/works" aria-label="作品一覧に戻る">
         <TbChevronLeft size={28} />
-      </Link>
+      </Link>}
       <Title>{work.title}</Title>
     </div>
     <div className="image">
@@ -76,9 +77,9 @@ const Component = ({ className, work }: Props): JSX.Element => (
           サイトを見る
         </a>
       )}
-      <Link className="link" href="/works">
+      {onBack ? <button className="link" onClick={onBack}>作品一覧に戻る</button> : <Link className="link" href="/works">
         作品一覧に戻る
-      </Link>
+      </Link>}
     </div>
   </div>
 );
@@ -204,6 +205,19 @@ const StyledComponent = styled(Component)`
       }
     }
   }
+  ${({ onBack }) => onBack && css`
+    color: #e9e1f2;
+    overflow-wrap: anywhere;
+    > .title { grid-template-columns: 40px minmax(0, 1fr) 40px; }
+    > .title h2 { color: #ffe4ad; font-size: clamp(20px, 3vw, 28px); }
+    > .title > .back { color: #ffe4ad; background: transparent; border: 1px solid #ffffff40; }
+    > .title > .back:hover { background: #ffffff10; }
+    > .section > .heading { color: #ffe4ad; border-color: #9b7b53; }
+    > .section > .stack > .row { border-color: #ffffff35; }
+    > .section > .challenges > .challenge { border-color: #9b7b53; background: #ffffff06; }
+    > .actions > .link { color: #ffe4ad; border-color: #9b7b53; background: transparent; font: inherit; }
+    > .actions > .link:hover { background: #ffffff10; }
+  `}
 `;
 
 export const WorkDetailContainer = (props: ContainerProps): JSX.Element => {
