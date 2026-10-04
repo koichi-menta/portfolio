@@ -3,8 +3,17 @@
 
 let context: AudioContext | null = null;
 let master: GainNode | null = null;
+let isAudioMuted = false;
 
 const MASTER_VOLUME = 0.35;
+
+// Muting must affect voices already scheduled by a cue, not just future calls.
+export const setAudioMuted = (muted: boolean): void => {
+  isAudioMuted = muted;
+  if (!context || !master) return;
+  master.gain.cancelScheduledValues(context.currentTime);
+  master.gain.setValueAtTime(muted ? 0 : MASTER_VOLUME, context.currentTime);
+};
 
 export const unlock = (): void => {
   if (typeof window === "undefined") return;
@@ -16,14 +25,14 @@ export const unlock = (): void => {
     if (!AudioContextClass) return;
     context = new AudioContextClass();
     master = context.createGain();
-    master.gain.value = MASTER_VOLUME;
+    master.gain.value = isAudioMuted ? 0 : MASTER_VOLUME;
     master.connect(context.destination);
   }
   if (context.state === "suspended") context.resume();
 };
 
 const getNodes = (): { ctx: AudioContext; out: GainNode } | null =>
-  context && master && context.state === "running"
+  context && master && !isAudioMuted && context.state === "running"
     ? { ctx: context, out: master }
     : null;
 

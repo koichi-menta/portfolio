@@ -7,6 +7,7 @@ import {
   MotionConfig,
   motion,
   useAnimate,
+  useReducedMotion,
 } from "framer-motion";
 import { TbBrandGithub, TbBrandTwitter, TbX } from "react-icons/tb";
 import profile_image from "public/profile_icon.jpeg";
@@ -244,6 +245,7 @@ type Props = {
 
 const Component = ({ className }: Props): JSX.Element => {
   const { isMuted } = useDopamineMode();
+  const shouldReduceMotion = useReducedMotion();
   // -1: 開始前 / 0〜: 再生中の場面 / SCENES.length: 終わりの画面
   const [sceneIndex, setSceneIndex] = useState<number>(-1);
   const [beatInScene, setBeatInScene] = useState<number>(0);
@@ -331,6 +333,11 @@ const Component = ({ className }: Props): JSX.Element => {
   useEffect(() => {
     if (!scene || !avatarScope.current) return;
     const el = avatarScope.current;
+    // Imperative useAnimate does not inherit MotionConfig's reducedMotion.
+    if (shouldReduceMotion) {
+      animateAvatar(el, { x: 0, y: 0, scale: 1, rotate: 0 }, { duration: 0 });
+      return;
+    }
     switch (scene.id) {
       case "intro":
         if (beatInScene === 0)
@@ -381,7 +388,7 @@ const Component = ({ className }: Props): JSX.Element => {
           { duration: 0.3 },
         );
     }
-  }, [scene, beatInScene, animateAvatar, avatarScope]);
+  }, [scene, beatInScene, animateAvatar, avatarScope, shouldReduceMotion]);
 
   return (
     <MotionConfig reducedMotion="user">
@@ -726,6 +733,10 @@ const StyledComponent = styled(Component)`
     50% {
       opacity: 0.2;
     }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .glitch::before, .glitch::after, .sub.learning { animation: none; }
   }
 `;
 

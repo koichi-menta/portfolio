@@ -280,7 +280,7 @@ const Component = ({ className }: Props): JSX.Element => {
         rewindAudioRef.current = playRewind(REWIND_MOVE_MS / 1000);
       }
       controls = animate(0, 1, {
-        duration: REWIND_MOVE_MS / 1000,
+        duration: shouldReduceMotion ? 0 : REWIND_MOVE_MS / 1000,
         ease: "easeInOut",
         onUpdate: (progress) => {
           const point = pointOnPolyline(REWIND_ROUTE, progress);
@@ -306,7 +306,7 @@ const Component = ({ className }: Props): JSX.Element => {
     };
     // 巻き戻しの開始時に一度だけ
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, size.width]);
+  }, [step, size.width, shouldReduceMotion]);
 
   // 紹介中も終わった後も、注目する場所が変わったらそこへ寄る
   useEffect(() => {
@@ -356,13 +356,19 @@ const Component = ({ className }: Props): JSX.Element => {
     if (!isDone) return;
     const viewport = viewportRef.current;
     const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.deltaY === 0) return;
       e.preventDefault();
       if (Math.abs(e.deltaY) < 10) return;
       browse(e.deltaY > 0 ? 1 : -1);
     };
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowDown") browse(1);
-      if (e.key === "ArrowUp") browse(-1);
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+      // The event panel is independently scrollable on short viewports. Keep
+      // arrow keys native while reading it instead of replacing the event.
+      if (e.target instanceof Element && e.target.closest(".eventCard")) return;
+      if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+      e.preventDefault();
+      browse(e.key === "ArrowDown" ? 1 : -1);
     };
     // ページ自体がスクロールしないよう preventDefault するため、passive: false で登録する
     viewport?.addEventListener("wheel", handleWheel, { passive: false });
@@ -525,6 +531,7 @@ const Component = ({ className }: Props): JSX.Element => {
               <motion.article
                 key={focusedEvent.title}
                 className="card eventCard"
+                tabIndex={0}
                 aria-label={`${focusedEvent.date} ${focusedEvent.title}`}
                 initial={{ y: 40, opacity: 0, scale: 0.9 }}
                 animate={{ y: 0, opacity: 1, scale: 1 }}
@@ -839,6 +846,10 @@ const StyledComponent = styled(Component)`
     50% {
       opacity: 0;
     }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rewindIcon { animation: none !important; }
   }
 `;
 

@@ -284,6 +284,10 @@ const StyledComponent = styled(Component)`
       }
     }
   }
+  @media (prefers-reduced-motion: reduce) {
+    > .card.shake, > .card.shakeHard { animation: none; }
+    > .circle > .menuItem.dopamine .link > div { animation: none; }
+  }
 `;
 
 export const Menu = (props: ContainerProps): JSX.Element => {

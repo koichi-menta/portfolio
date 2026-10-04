@@ -3,12 +3,13 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
 import styled, { createGlobalStyle } from "styled-components";
 import { TbVolume, TbVolumeOff } from "react-icons/tb";
-import { playBurst, unlock } from "src/lib/dopamineSound";
+import { playBurst, setAudioMuted, unlock } from "src/lib/dopamineSound";
 
 type DopamineModeValue = {
   isDopamine: boolean;
@@ -40,6 +41,7 @@ const DopamineGlobalStyle = createGlobalStyle`
     );
     background-size: 400% 400%;
     animation: dopamine-background 6s ease-in-out infinite;
+    @media (prefers-reduced-motion: reduce) { animation: none; }
   }
   @keyframes dopamine-background {
     0% {
@@ -163,18 +165,24 @@ type Props = {
 export const DopamineModeProvider = ({ children }: Props): JSX.Element => {
   const [isDopamine, setIsDopamine] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
+  useEffect(() => () => setAudioMuted(true), []);
 
   // クリックの中から呼ばれる前提。音声の再生許可もここで取る
   const enable = useCallback(() => {
+    setAudioMuted(isMuted);
     unlock();
     if (!isMuted) playBurst();
     setIsDopamine(true);
   }, [isMuted]);
-  const disable = useCallback(() => setIsDopamine(false), []);
+  const disable = useCallback(() => {
+    setAudioMuted(true);
+    setIsDopamine(false);
+  }, []);
   const toggleMute = useCallback(() => {
     unlock();
-    setIsMuted((prev) => !prev);
-  }, []);
+    setAudioMuted(!isMuted || !isDopamine);
+    setIsMuted(!isMuted);
+  }, [isMuted, isDopamine]);
 
   const value = useMemo(
     () => ({ isDopamine, isMuted, enable, disable, toggleMute }),

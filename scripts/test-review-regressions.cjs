@@ -57,11 +57,21 @@ function load(relative, mocks, cache = new Map()) {
   return module.exports;
 }
 
-function timelineHarness(t, initiallyMuted = false, throughContainer = false) {
+function timelineHarness(t, initiallyMuted = false, throughContainer = false, reducedMotion = false) {
   t.mock.timers.enable({ apis: ["setTimeout", "setInterval", "Date"] });
   const previousWindow = global.window;
   const previousObserver = global.ResizeObserver;
-  global.window = { addEventListener() {}, removeEventListener() {} };
+  const previousElement = global.Element;
+  const listeners = new Map();
+  const animations = [];
+  class FakeElement {
+    closest(selector) { return selector === ".eventCard" && this.isCard ? this : null; }
+  }
+  global.Element = FakeElement;
+  global.window = {
+    addEventListener(type, callback) { listeners.set(type, callback); },
+    removeEventListener(type) { listeners.delete(type); },
+  };
   global.ResizeObserver = class {
     constructor(callback) { this.callback = callback; }
     observe() { this.callback([{ contentRect: { width: 1440, height: 800 } }]); }
@@ -72,7 +82,8 @@ function timelineHarness(t, initiallyMuted = false, throughContainer = false) {
   const rewinds = [];
   const mocks = {
     "next/link": Link,
-    "framer-motion": framer,
+    "framer-motion": { ...framer, useReducedMotion: () => reducedMotion,
+      animate: (...args) => { animations.push(args); return { stop() {} }; } },
     "src/contexts/DopamineMode": {
       DOPAMINE_CONTROLS_SAFE_AREA: 72,
       useDopamineMode: () => ({ isMuted, isDopamine }),
@@ -105,10 +116,19 @@ function timelineHarness(t, initiallyMuted = false, throughContainer = false) {
     act(() => renderer.unmount());
     global.window = previousWindow;
     global.ResizeObserver = previousObserver;
+    global.Element = previousElement;
     t.mock.timers.reset();
   });
   return {
     renderer,
+    animations,
+    key: (key, target = new FakeElement(), extra = {}) => {
+      const event = { key, target, defaultPrevented: false,
+        preventDefault() { this.defaultPrevented = true; }, ...extra };
+      act(() => listeners.get("keydown")?.(event));
+      return event;
+    },
+    cardTarget: () => Object.assign(new FakeElement(), { isCard: true, scrollTop: 0, scrollHeight: 600, clientHeight: 100 }),
     tick: milliseconds => act(() => t.mock.timers.tick(milliseconds)),
     mute: value => act(() => {
       isMuted = value;
@@ -159,6 +179,95 @@ test("timeline nodes disable during intro/replay and enable after skip/completio
   disabled(true);
   scene.tick(1500);
   disabled(false);
+});
+
+test("timeline reduced motion never starts a moving rewind camera", t => {
+  const scene = timelineHarness(t, true, false, true);
+  scene.tick(500);
+  const rewind = scene.animations.find(args => args[0] === 0 && args[1] === 1);
+  assert.ok(rewind, "The rewind still reaches the first event");
+  assert.equal(rewind[2].duration, 0);
+});
+
+test("timeline event cards retain native keyboard scrolling and modified keys", t => {
+  const scene = timelineHarness(t, true);
+  scene.click("skip");
+  scene.key("ArrowDown");
+  scene.tick(701);
+  const currentTitle = () => scene.renderer.root.find(node => node.type === "article").props["aria-label"];
+  const before = currentTitle();
+  const card = scene.renderer.root.find(node => node.type === "article");
+  assert.equal(card.props.tabIndex, 0, "Long descriptions must be keyboard-focusable");
+  assert.equal(scene.key("ArrowDown", scene.cardTarget()).defaultPrevented, false);
+  assert.equal(currentTitle(), before, "Reading a card must not navigate away");
+  scene.key("ArrowDown", undefined, { altKey: true });
+  assert.equal(currentTitle(), before);
+  assert.equal(scene.key("ArrowDown").defaultPrevented, true);
+  assert.notEqual(currentTitle(), before);
+});
+
+test("profile reduced motion does not launch imperative avatar transforms", t => {
+  t.mock.timers.enable({ apis: ["setInterval"] });
+  const animations = [];
+  const animateAvatar = (...args) => { animations.push(args); return { stop() {} }; };
+  const { ProfileMV } = load("src/components/blocks/ProfileMV/index.tsx", {
+    "next/link": Link, "next/image": () => null, "public/profile_icon.jpeg": {},
+    "framer-motion": { ...framer, useReducedMotion: () => true,
+      useAnimate: () => [React.useRef(null), animateAvatar] },
+    "src/contexts/DopamineMode": { DOPAMINE_CONTROLS_SAFE_AREA: 72, useDopamineMode: () => ({ isMuted: true }) },
+    "src/lib/dopamineSound": { unlock() {}, playBass() {}, playBurst() {}, playHat() {}, playKick() {}, playReveal() {} },
+  });
+  let renderer;
+  t.after(() => { act(() => renderer?.unmount()); t.mock.timers.reset(); });
+  act(() => { renderer = create(element(ProfileMV), { createNodeMock: () => ({}) }); });
+  for (let i = 0; i < 48; i += 1) act(() => t.mock.timers.tick(60000 / 128));
+  assert.ok(animations.length > 0);
+  assert.ok(animations.every(([, , options]) => options?.duration === 0),
+    "MotionConfig does not govern imperative useAnimate calls");
+});
+
+test("global mute and mode exit silence an already scheduled activation burst", t => {
+  const previousWindow = global.window;
+  let context, mode;
+  const parameter = () => ({ value: 0,
+    setValueAtTime(value) { this.value = value; },
+    exponentialRampToValueAtTime() {}, cancelScheduledValues() {},
+  });
+  class AudioContext {
+    constructor() { context = this; this.state = "running"; this.currentTime = 10;
+      this.sampleRate = 100; this.destination = {}; this.gains = []; this.sources = []; }
+    node(extra = {}) { return { connect(target) { return target; }, disconnect() {}, ...extra }; }
+    createGain() { const gain = this.node({ gain: parameter() }); this.gains.push(gain); return gain; }
+    createBiquadFilter() { return this.node({ frequency: parameter() }); }
+    createBuffer() { return { getChannelData: () => new Float32Array(60) }; }
+    createBufferSource() { return this.createOscillator(); }
+    createOscillator() {
+      const source = this.node({ frequency: parameter(), starts: [],
+        start(time) { this.starts.push(time); }, stop() {} });
+      this.sources.push(source); return source;
+    }
+  }
+  global.window = { AudioContext };
+  const { DopamineModeProvider, useDopamineMode } = load("src/contexts/DopamineMode.tsx", {});
+  const Probe = () => { mode = useDopamineMode(); return null; };
+  let renderer;
+  t.after(() => { act(() => renderer?.unmount()); global.window = previousWindow; });
+  act(() => { renderer = create(element(DopamineModeProvider, null, element(Probe))); });
+  act(() => mode.enable());
+  assert.equal(context.gains[0].gain.value, 0.35);
+  assert.ok(context.sources.some(source => source.starts.some(time => time > context.currentTime)),
+    "The activation burst has notes scheduled after this click");
+  act(() => mode.toggleMute());
+  assert.equal(mode.isMuted, true);
+  assert.equal(context.gains[0].gain.value, 0, "Mute must silence already scheduled notes too");
+  act(() => mode.toggleMute());
+  assert.equal(context.gains[0].gain.value, 0.35);
+  act(() => mode.disable());
+  assert.equal(context.gains[0].gain.value, 0, "Leaving dopamine mode must silence the remaining burst");
+  act(() => mode.enable());
+  assert.equal(context.gains[0].gain.value, 0.35);
+  act(() => renderer.unmount());
+  assert.equal(context.gains[0].gain.value, 0);
 });
 
 test("canceling the rewind hold clears its pending audio", t => {

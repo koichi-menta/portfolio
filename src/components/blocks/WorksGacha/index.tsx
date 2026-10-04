@@ -12,6 +12,7 @@ import { WorkDetailContainer } from "src/components/container/WorkDetail";
 
 const LAUNCH_STAGGER_MS = 180;
 const COLLECTION_STAGGER_MS = 220;
+const COLLECTION_LAND_MS = 750;
 type Phase = "intro" | "sealed" | "charging" | "burst" | "reveal" | "collection" | "detail";
 type Drag = {
   id: number;
@@ -43,7 +44,7 @@ const Component = ({ className }: Props): JSX.Element => {
   const dialog = useRef<HTMLDialogElement>(null);
   const normalButton = useRef<HTMLButtonElement>(null);
   const sceneContent = useRef<HTMLDivElement>(null);
-  const revealTitle = useRef<HTMLHeadingElement>(null);
+  const revealFrame = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
   const [index, setIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -190,6 +191,16 @@ const Component = ({ className }: Props): JSX.Element => {
     if (reduceMotion) setCelebrateCollection(false);
   }, [reduceMotion]);
   useEffect(() => {
+    if (!celebrateCollection) return;
+    // A changed OS motion setting can cancel CSS animations without firing
+    // animationend. Never leave every detail button disabled in that case.
+    const timer = window.setTimeout(
+      () => setCelebrateCollection(false),
+      COLLECTION_LAND_MS + Math.max(0, worksData.length - 1) * COLLECTION_STAGGER_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [celebrateCollection]);
+  useEffect(() => {
     const sceneAudio = audio.current;
     return () => sceneAudio.stop();
   }, []);
@@ -197,7 +208,7 @@ const Component = ({ className }: Props): JSX.Element => {
   useEffect(() => {
     if (phase === previousPhase.current) return;
     previousPhase.current = phase;
-    if (phase === "reveal") revealTitle.current?.focus({ preventScroll: true });
+    if (phase === "reveal") revealFrame.current?.focus({ preventScroll: true });
     if (phase === "collection") {
       const restore = collectionRestore.current;
       sceneContent.current?.scrollTo(0, restore?.scroll || 0);
@@ -428,9 +439,9 @@ const Component = ({ className }: Props): JSX.Element => {
             </div>
           )}
           {phase === "reveal" && (
-            <div className="revealScene" key={work.slug}>
-              <div className="revealHalo" aria-hidden="true" />
-              <p className="revealLabel">✦ SPECIAL SUPER RARE ✦</p>
+            <div className="revealScene" ref={revealFrame} tabIndex={-1} role="group" aria-labelledby="works-reveal-title">
+              <div className="revealHalo" key={`halo-${work.slug}`} aria-hidden="true" />
+              <p className="revealLabel" key={`label-${work.slug}`}>✦ SPECIAL SUPER RARE ✦</p>
                 <motion.article
                   key={work.slug}
                   className="heroCard"
@@ -455,7 +466,7 @@ const Component = ({ className }: Props): JSX.Element => {
                     alt=""
                     priority
                   />
-                  <h4 ref={revealTitle} tabIndex={-1}>{work.title}</h4>
+                  <h4 id="works-reveal-title" tabIndex={-1}>{work.title}</h4>
                   <p>{work.description}</p>
                   <span
                     className="linkInteraction"
@@ -1183,7 +1194,7 @@ const StyledComponent = styled(Component)`
   }
   .celebrating .resultCard {
     transform-origin: 50% 65%;
-    animation: collectionLand .75s var(--land-delay) cubic-bezier(.16,1,.3,1) both;
+    animation: collectionLand ${COLLECTION_LAND_MS}ms var(--land-delay) cubic-bezier(.16,1,.3,1) both;
   }
   .celebrating .resultCard::after {
     content: ""; position: absolute; inset: -70%; pointer-events: none;

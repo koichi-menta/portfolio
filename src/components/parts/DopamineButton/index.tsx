@@ -34,6 +34,7 @@ const StyledComponent = styled(Component)`
   cursor: pointer;
   box-shadow: 0 0 16px rgba(255, 106, 213, 0.6);
   animation: dopamine-button-flow 2s linear infinite;
+  @media (prefers-reduced-motion: reduce) { animation: none; }
 
   @keyframes dopamine-button-flow {
     0% {
