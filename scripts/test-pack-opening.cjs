@@ -205,7 +205,13 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   await mobile.page.screenshot({path:path.join(out,'mobile-reveal.png')});
   await phase(mobile.page,'collection');
   await cleanUI(mobile.page);
-  await checkColumns(mobile.page,1);
+  for (const width of [320, 375, 390]) {
+    await mobile.page.setViewportSize({width, height:640});
+    await checkColumns(mobile.page,2);
+    assert.equal(await mobile.page.locator('.resultCard .workLink').evaluateAll(links => links.every(link => link.getBoundingClientRect().height >= 44)),true,'Mobile detail links retain touch-sized hit areas');
+    await cleanUI(mobile.page);
+  }
+  await mobile.page.setViewportSize({width:320,height:640});
   await mobile.page.locator('.sceneContent').evaluate(el => el.scrollTo(0,el.scrollHeight));
   await mobile.page.screenshot({path:path.join(out,'mobile-collection-bottom.png')});
   assert.equal(await mobile.page.evaluate(() => document.documentElement.scrollWidth<=innerWidth),true);

@@ -1191,8 +1191,8 @@ const StyledComponent = styled(Component)`
   }
   .grid {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 20px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
     width: 100%;
   }
   .resultCard {
@@ -1223,9 +1223,25 @@ const StyledComponent = styled(Component)`
   .resultCard .workLink {
     align-self: flex-start;
   }
+  @media (max-width: 767px) {
+    .resultCard { padding: 10px; }
+    .resultCard .cardMeta { flex-wrap: wrap; gap: 4px; }
+    .resultCard .cardMeta b { font-size: 18px; }
+    .resultCard h4 { font-size: 14px; line-height: 1.5; margin: 12px 0 8px; }
+    .resultCard p { font-size: 12px; line-height: 1.7; margin-bottom: 12px; }
+    .resultCard .workLink {
+      align-self: stretch;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      margin-top: auto;
+      padding: 6px 0;
+    }
+  }
   @media (${device.tablet}) {
     .grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
     }
   }
   @media (${device.laptop}) {

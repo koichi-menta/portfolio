@@ -397,3 +397,53 @@ test('real Works audio cleanup never stops another scene owner', () => {
     assert.ok(second.every(n => n.stops.length === 2));
     assert.equal(audio.context().nodes[0].disconnections, 0);
 });
+
+test('collection CSS uses two readable mobile columns and preserves four desktop columns', () => {
+    const { ServerStyleSheet } = req('styled-components');
+    const { renderToStaticMarkup } = req('react-dom/server');
+    const { WorksGacha } = load('src/components/blocks/WorksGacha/index.tsx', {
+        'next/link': ({ children, ...props }) => el('a', props, children),
+        'next/image': () => null,
+        'framer-motion': { motion: new Proxy({}, { get: (_, type) => type }) },
+        'src/hooks/useReducedMotionPreference': { useReducedMotionPreference: () => false },
+        'src/contexts/DopamineMode': { DOPAMINE_CONTROLS_SAFE_AREA: 72, useDopamineMode: () => ({ isMuted: true }) },
+    });
+    const sheet = new ServerStyleSheet();
+    try {
+        renderToStaticMarkup(sheet.collectStyles(el(WorksGacha)));
+        const css = req('postcss').parse(sheet.getStyleTags().replace(/<style[^>]*>|<\/style>/g, ''));
+        // Check emitted rules at each breakpoint, not browser geometry.
+        const valueAt = (suffix, property, width) => {
+            let value;
+            css.walkRules(rule => {
+                if (!rule.selector.split(',').some(selector => selector.trim().endsWith(suffix))) return;
+                for (let parent = rule.parent; parent; parent = parent.parent) {
+                    if (parent.type !== 'atrule') continue;
+                    if (parent.name !== 'media') return;
+                    if (/prefers-reduced-motion|min-height|max-height/.test(parent.params)) return;
+                    const min = parent.params.match(/min-width:\s*(\d+)px/), max = parent.params.match(/max-width:\s*(\d+)px/);
+                    if ((min && width < +min[1]) || (max && width > +max[1])) return;
+                }
+                rule.walkDecls(property, declaration => { value = declaration.value; });
+            });
+            return value;
+        };
+        for (const width of [320, 375, 390, 768, 1023]) {
+            assert.equal(valueAt(' .grid', 'grid-template-columns', width), 'repeat(2,minmax(0,1fr))');
+        }
+        for (const width of [1024, 1440]) {
+            assert.equal(valueAt(' .grid', 'grid-template-columns', width), 'repeat(4,minmax(0,1fr))');
+        }
+        for (const width of [320, 375, 390]) {
+            assert.equal(valueAt(' .resultCard', 'min-width', width), '0');
+            assert.equal(valueAt(' .resultCard', 'overflow-wrap', width), 'anywhere');
+            assert.equal(valueAt(' .resultCard', 'padding', width), '10px');
+            assert.equal(valueAt(' .resultCard h4', 'font-size', width), '14px');
+            assert.equal(valueAt(' .resultCard p', 'font-size', width), '12px');
+            assert.equal(valueAt(' .resultCard .workLink', 'min-height', width), '44px');
+            assert.equal(valueAt(' .heroCard', 'max-width', width), '340px');
+            assert.equal(valueAt(' .detailFrame', 'width', width), '100%');
+            assert.match(valueAt(' .sceneContent', 'padding', width), /72px \+ 24px/);
+        }
+    } finally { sheet.seal(); }
+});
