@@ -6,7 +6,6 @@ import {
   AnimatePresence,
   MotionConfig,
   motion,
-  useReducedMotion,
 } from "framer-motion";
 import { TbChevronDown, TbChevronUp, TbUserCircle, TbX } from "react-icons/tb";
 import profile_image from "public/profile_icon.jpeg";
@@ -18,6 +17,7 @@ import {
   useDopamineMode,
 } from "src/contexts/DopamineMode";
 import { useTypewriter } from "src/hooks/useTypewriter";
+import { useReducedMotionPreference } from "src/hooks/useReducedMotionPreference";
 import { playPop, playTick, unlock } from "src/lib/dopamineSound";
 
 const MS_PER_CHAR = 30;
@@ -68,7 +68,7 @@ const Slide = ({
   onReplay,
   answerRef,
 }: SlideProps): JSX.Element => {
-  const shouldReduceMotion = useReducedMotion();
+  const shouldReduceMotion = useReducedMotionPreference();
   const [isAnswering, setIsAnswering] = useState<boolean>(false);
   const handleType = useCallback(
     (count: number) => {
@@ -94,6 +94,10 @@ const Slide = ({
     // 表示された時に一度だけ
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (shouldReduceMotion) complete();
+  }, [shouldReduceMotion, complete]);
 
   return (
     <motion.div className="slide" onClick={complete}>
@@ -153,8 +157,8 @@ const Slide = ({
           ) : (
             <motion.p
               className="nextHint"
-              animate={{ y: [0, -6, 0] }}
-              transition={{ duration: 1, repeat: Infinity }}
+              animate={shouldReduceMotion ? { y: 0 } : { y: [0, -6, 0] }}
+              transition={shouldReduceMotion ? { duration: 0 } : { duration: 1, repeat: Infinity }}
             >
               <TbChevronUp size={20} />
               上にスワイプ・スクロールで次の質問

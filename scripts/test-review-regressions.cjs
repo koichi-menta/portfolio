@@ -84,6 +84,7 @@ function timelineHarness(t, initiallyMuted = false, throughContainer = false, re
     "next/link": Link,
     "framer-motion": { ...framer, useReducedMotion: () => reducedMotion,
       animate: (...args) => { animations.push(args); return { stop() {} }; } },
+    "src/hooks/useReducedMotionPreference": { useReducedMotionPreference: () => reducedMotion },
     "src/contexts/DopamineMode": {
       DOPAMINE_CONTROLS_SAFE_AREA: 72,
       useDopamineMode: () => ({ isMuted, isDopamine }),
@@ -206,6 +207,32 @@ test("timeline event cards retain native keyboard scrolling and modified keys", 
   assert.notEqual(currentTitle(), before);
 });
 
+test("timeline pinch, canceled touch and playback-era gestures never navigate", t => {
+  const scene = timelineHarness(t, true);
+  const viewport = () => scene.renderer.root.find(node => node.type === "div" && node.props.className === "viewport");
+  const touch = y => ({ clientY: y });
+  const dispatch = (handler, event) => act(() => viewport().props[handler]?.(event));
+  const atNow = () => scene.renderer.root.findAll(node => node.props.className === "card eventCard nowCard").length === 1;
+  // A gesture that starts during autoplay does not become a browsing gesture.
+  dispatch("onTouchStart", { touches: [touch(400)] });
+  scene.click("skip");
+  dispatch("onTouchEnd", { touches: [], changedTouches: [touch(100)] });
+  assert.equal(atNow(), true);
+  // Adding a second finger changes the gesture to pinch, even when one finger lifts first.
+  dispatch("onTouchStart", { touches: [touch(400)] });
+  dispatch("onTouchStart", { touches: [touch(400), touch(500)] });
+  dispatch("onTouchEnd", { touches: [touch(500)], changedTouches: [touch(100)] });
+  dispatch("onTouchEnd", { touches: [], changedTouches: [touch(500)] });
+  assert.equal(atNow(), true);
+  dispatch("onTouchStart", { touches: [touch(400)] });
+  dispatch("onTouchCancel", {});
+  dispatch("onTouchEnd", { touches: [], changedTouches: [touch(100)] });
+  assert.equal(atNow(), true);
+  dispatch("onTouchStart", { touches: [touch(400)] });
+  dispatch("onTouchEnd", { touches: [], changedTouches: [touch(100)] });
+  assert.equal(atNow(), false, "Ordinary one-finger browsing remains available");
+});
+
 test("profile reduced motion does not launch imperative avatar transforms", t => {
   t.mock.timers.enable({ apis: ["setInterval"] });
   const animations = [];
@@ -214,13 +241,23 @@ test("profile reduced motion does not launch imperative avatar transforms", t =>
     "next/link": Link, "next/image": () => null, "public/profile_icon.jpeg": {},
     "framer-motion": { ...framer, useReducedMotion: () => true,
       useAnimate: () => [React.useRef(null), animateAvatar] },
+    "src/hooks/useReducedMotionPreference": { useReducedMotionPreference: () => true },
     "src/contexts/DopamineMode": { DOPAMINE_CONTROLS_SAFE_AREA: 72, useDopamineMode: () => ({ isMuted: true }) },
     "src/lib/dopamineSound": { unlock() {}, playBass() {}, playBurst() {}, playHat() {}, playKick() {}, playReveal() {} },
   });
   let renderer;
   t.after(() => { act(() => renderer?.unmount()); t.mock.timers.reset(); });
   act(() => { renderer = create(element(ProfileMV), { createNodeMock: () => ({}) }); });
-  for (let i = 0; i < 48; i += 1) act(() => t.mock.timers.tick(60000 / 128));
+  let floodSeen = false;
+  for (let i = 0; i < 48; i += 1) {
+    act(() => t.mock.timers.tick(60000 / 128));
+    const flood = renderer.root.findAll(node => node.props.className === "flood")[0];
+    if (flood) {
+      floodSeen = true;
+      assert.equal(flood.props.transition.duration, 0, "The full-screen clip-path reveal must also honor reduced motion");
+    }
+  }
+  assert.equal(floodSeen, true);
   assert.ok(animations.length > 0);
   assert.ok(animations.every(([, , options]) => options?.duration === 0),
     "MotionConfig does not govern imperative useAnimate calls");

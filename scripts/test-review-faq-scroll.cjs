@@ -40,6 +40,7 @@ const mocks = {
   "public/profile_icon.jpeg": {},
   "framer-motion": { AnimatePresence: fragment, MotionConfig: fragment,
     motion: new Proxy({}, { get: (_, type) => type }), useReducedMotion: () => true },
+  "src/hooks/useReducedMotionPreference": { useReducedMotionPreference: () => true },
   "src/contexts/DopamineMode": { DOPAMINE_CONTROLS_SAFE_AREA: 72, useDopamineMode: () => ({ isMuted: true }) },
   "src/components/parts/DopamineButton": { DopamineButton: props => element("button", props) },
   "src/lib/dopamineSound": { playPop() {}, playTick() {}, unlock() {} },

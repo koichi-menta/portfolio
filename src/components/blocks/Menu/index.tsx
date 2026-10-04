@@ -12,8 +12,9 @@ import {
 } from "react-icons/tb";
 import { device } from "src/constants/breakpoints";
 import { useDopamineMode } from "src/contexts/DopamineMode";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useBeat } from "src/hooks/useBeat";
+import { useReducedMotionPreference } from "src/hooks/useReducedMotionPreference";
 
 // この間隔を空けずにメニューを連続で開閉するとドーパミンモードになる
 const COMBO_INTERVAL_MS = 1000;
@@ -295,7 +296,7 @@ export const Menu = (props: ContainerProps): JSX.Element => {
   const [combo, setCombo] = useState<number>(0);
   const { isDopamine, isMuted, enable } = useDopamineMode();
   const beat = useBeat(BEAT_BPM, isDopamine, isMuted);
-  const shouldReduceMotion = useReducedMotion();
+  const shouldReduceMotion = useReducedMotionPreference();
   const lastClickedAtRef = useRef<number>(0);
   const comboResetTimerRef = useRef<ReturnType<typeof setTimeout>>();
 

@@ -7,11 +7,11 @@ import {
   MotionConfig,
   motion,
   useAnimate,
-  useReducedMotion,
 } from "framer-motion";
 import { TbBrandGithub, TbBrandTwitter, TbX } from "react-icons/tb";
 import profile_image from "public/profile_icon.jpeg";
 import { DopamineButton } from "src/components/parts/DopamineButton";
+import { useReducedMotionPreference } from "src/hooks/useReducedMotionPreference";
 import {
   DOPAMINE_CONTROLS_SAFE_AREA,
   useDopamineMode,
@@ -245,7 +245,7 @@ type Props = {
 
 const Component = ({ className }: Props): JSX.Element => {
   const { isMuted } = useDopamineMode();
-  const shouldReduceMotion = useReducedMotion();
+  const shouldReduceMotion = useReducedMotionPreference();
   // -1: 開始前 / 0〜: 再生中の場面 / SCENES.length: 終わりの画面
   const [sceneIndex, setSceneIndex] = useState<number>(-1);
   const [beatInScene, setBeatInScene] = useState<number>(0);
@@ -417,7 +417,7 @@ const Component = ({ className }: Props): JSX.Element => {
             className="flood"
             initial={{ clipPath: "circle(0% at 50% 45%)", opacity: 0.9 }}
             animate={{ clipPath: "circle(80% at 50% 45%)", opacity: 0.55 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.6, ease: "easeOut" }}
           />
         )}
 

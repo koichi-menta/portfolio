@@ -14,7 +14,6 @@ import {
   animate,
   motion,
   useMotionValue,
-  useReducedMotion,
   useTransform,
 } from "framer-motion";
 import { TbFlag, TbPlayerTrackPrev, TbX } from "react-icons/tb";
@@ -27,6 +26,7 @@ import {
   useDopamineMode,
 } from "src/contexts/DopamineMode";
 import { useTimedSequence } from "src/hooks/useTimedSequence";
+import { useReducedMotionPreference } from "src/hooks/useReducedMotionPreference";
 import { playPop, playReveal, playRewind, unlock } from "src/lib/dopamineSound";
 
 // 最新の出来事のアップで一拍置いてから、山道を下って過去へ戻る
@@ -135,7 +135,7 @@ const Component = ({ className }: Props): JSX.Element => {
     isMutedRef.current = isMuted;
     if (isMuted) stopRewindAudio();
   }, [isMuted, stopRewindAudio]);
-  const shouldReduceMotion = useReducedMotion();
+  const shouldReduceMotion = useReducedMotionPreference();
   const durations = useMemo(
     () => [
       REWIND_HOLD_MS + REWIND_MOVE_MS,
@@ -327,8 +327,7 @@ const Component = ({ className }: Props): JSX.Element => {
     }
     if (currentStop < 0) return;
     moveCamera(STOP_POINTS[currentStop], closeUpScale, closeUpAnchor);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStop, isOverview, size]);
+  }, [currentStop, isOverview, size, moveCamera, closeUpScale]);
 
   // 注目する場所が変わった時の音と日付。
   // 「デン！」は最初のアニメーションで NOW にたどり着いた時だけ。見て回る時はどこでも同じ音
@@ -380,13 +379,16 @@ const Component = ({ className }: Props): JSX.Element => {
   }, [isDone, browse]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartYRef.current = e.touches[0].clientY;
+    touchStartYRef.current = isDone && e.touches.length === 1
+      ? e.touches[0].clientY : null;
   };
+  const cancelTouch = () => { touchStartYRef.current = null; };
   const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!isDone || touchStartYRef.current === null) return;
-    // 指を上へ払う = 下へスクロール
-    const deltaY = touchStartYRef.current - e.changedTouches[0].clientY;
+    const startY = touchStartYRef.current;
     touchStartYRef.current = null;
+    if (!isDone || startY === null || e.touches.length !== 0 || e.changedTouches.length !== 1) return;
+    // 指を上へ払う = 下へスクロール
+    const deltaY = startY - e.changedTouches[0].clientY;
     if (Math.abs(deltaY) < SWIPE_THRESHOLD_PX) return;
     browse(deltaY > 0 ? 1 : -1);
   };
@@ -418,7 +420,9 @@ const Component = ({ className }: Props): JSX.Element => {
           className="viewport"
           ref={viewportRef}
           onTouchStart={handleTouchStart}
+          onTouchMove={(event) => { if (event.touches.length !== 1) cancelTouch(); }}
           onTouchEnd={handleTouchEnd}
+          onTouchCancel={cancelTouch}
         >
           <motion.div
             className="world"

@@ -28,14 +28,18 @@ function harness(t, { reduced = false, realReducedHook = false } = {}) {
     const oldWindow = global.window, oldDocument = global.document;
     let muted = false, disableCount = 0;
     const listeners = new Map(), focuses = [], h4s = [], calls = [], mediaListeners = [];
-    const media = { matches: reduced, addListener(f) { mediaListeners.push(f); } };
+    const addMediaListener = f => mediaListeners.push(f);
+    const removeMediaListener = f => { const index = mediaListeners.indexOf(f); if (index >= 0) mediaListeners.splice(index, 1); };
+    const media = { matches: reduced, addListener: addMediaListener, removeListener: removeMediaListener,
+        addEventListener(type, f) { if (type === 'change') addMediaListener(f); },
+        removeEventListener(type, f) { if (type === 'change') removeMediaListener(f); } };
     const body = { style: { position: 'relative', top: '3px', width: '90%', overflow: 'auto' } };
     const sceneNode = { scrollTop: 0, scrollTo(x, y) { this.scrollTop = y; }, querySelector(selector) { return { focus(options) { focuses.push({ kind: 'restored-card', selector, options }); } }; } };
     global.window = { setTimeout: (...args) => setTimeout(...args), clearTimeout: id => clearTimeout(id), scrollY: 123, scrollTo: (x, y) => calls.push(['window-scroll', x, y]), matchMedia: () => media };
     global.document = { body, hidden: false, addEventListener: (type, fn) => listeners.set(type, fn), removeEventListener: type => listeners.delete(type) };
     const audio = { stop: () => calls.push(['stop']), guarantee: () => calls.push(['guarantee']), reveal: () => calls.push(['reveal']), impact: i => calls.push(['impact', i]), collectionImpact: i => calls.push(['collectionImpact', i]) };
-    const framer = { motion: new Proxy({}, { get: (_, type) => type }), useReducedMotion: realReducedHook ? req('framer-motion').useReducedMotion : () => reduced };
-    const mocks = { 'next/link': ({ children, ...p }) => el('a', p, children), 'next/image': () => null, 'framer-motion': framer, 'src/contexts/DopamineMode': { DOPAMINE_CONTROLS_SAFE_AREA: 72, useDopamineMode: () => ({ isMuted: muted, disable: () => disableCount++ }) }, 'src/lib/dopamineSound': { createWorksAudio: () => audio, unlock() { calls.push(['unlock']); }, playTick() { calls.push(['tick']); } } };
+    const framer = { motion: new Proxy({}, { get: (_, type) => type }), useReducedMotion: () => reduced };
+    const mocks = { 'next/link': ({ children, ...p }) => el('a', p, children), 'next/image': () => null, 'framer-motion': framer, ...(realReducedHook ? {} : { 'src/hooks/useReducedMotionPreference': { useReducedMotionPreference: () => reduced } }), 'src/contexts/DopamineMode': { DOPAMINE_CONTROLS_SAFE_AREA: 72, useDopamineMode: () => ({ isMuted: muted, disable: () => disableCount++ }) }, 'src/lib/dopamineSound': { createWorksAudio: () => audio, unlock() { calls.push(['unlock']); }, playTick() { calls.push(['tick']); } } };
     const Scene = load('src/components/blocks/WorksGacha/index.tsx', mocks).WorksGacha;
     let renderer;
     act(() => {
@@ -135,15 +139,44 @@ test('unmount cancels all scheduled scene updates, closes dialog and restores bo
     assert.ok(h.calls.some(c => c[0] === 'close-modal'));
     assert.ok(h.calls.some(c => c[0] === 'window-scroll' && c[2] === 123));
 });
-test('collection ends even when reduced-motion CSS cancels all animationend events', t => {
-    const h = harness(t, { realReducedHook: true });
+test('collection fallback enables details even without animationend', t => {
+    const h = harness(t);
     reveal(h);
-    h.setReduced(true);
     for (let i = 0; i < 4; i++)
         h.tick(2000);
     assert.equal(h.phase(), 'collection');
     assert.ok(h.details().every(n => n.props.disabled));
     h.tick(750 + 3 * 220);
+    assert.ok(h.details().every(n => !n.props.disabled));
+    assert.equal(h.find('collection settled').props.className, 'collection settled');
+});
+test('live reduced motion before opening skips charging and all hero transforms', t => {
+    const h = harness(t, { realReducedHook: true });
+    h.tick(2200);
+    h.setReduced(true);
+    h.enter();
+    assert.equal(h.phase(), 'reveal');
+    assert.deepEqual(h.find('heroCard').props.initial, { opacity: 0 });
+    assert.deepEqual(h.find('heroCard').props.animate, { opacity: 1, y: 0, scale: 1, rotateY: 0, rotate: 0 });
+    for (let i = 0; i < 4; i++)
+        h.tick(1400);
+    assert.equal(h.phase(), 'collection');
+    assert.ok(h.details().every(n => !n.props.disabled));
+});
+test('live reduced motion resets transforms on the currently revealed card', t => {
+    const h = harness(t, { realReducedHook: true });
+    reveal(h);
+    assert.ok(Array.isArray(h.find('heroCard').props.animate.rotateY));
+    h.setReduced(true);
+    assert.deepEqual(h.find('heroCard').props.animate, { opacity: 1, y: 0, scale: 1, rotateY: 0, rotate: 0 });
+});
+test('live reduced motion immediately releases a collection whose CSS animations are canceled', t => {
+    const h = harness(t, { realReducedHook: true });
+    reveal(h);
+    for (let i = 0; i < 4; i++)
+        h.tick(2000);
+    assert.ok(h.details().every(n => n.props.disabled));
+    h.setReduced(true);
     assert.ok(h.details().every(n => !n.props.disabled));
     assert.equal(h.find('collection settled').props.className, 'collection settled');
 });
@@ -186,6 +219,63 @@ test('keyboard pause and focus pause each hold the current reveal until released
     act(() => h.find('linkInteraction').props.onBlur());
     h.tick(2000);
     assert.notEqual(h.title(), second);
+});
+for (const end of ['onPointerUp', 'onPointerCancel', 'onPointerLeave', 'onBlur', 'hidden']) {
+    test(`temporary reveal press ends on ${end} without requiring a keyboard`, t => {
+        const h = harness(t);
+        reveal(h);
+        const title = h.title();
+        act(() => h.find('linkInteraction').props.onPointerDown());
+        h.tick(9000);
+        assert.equal(h.title(), title, 'A held pointer protects the current link');
+        if (end === 'hidden') { h.hide(true); h.hide(false); }
+        else act(() => h.find('linkInteraction').props[end]());
+        h.tick(1999);
+        assert.equal(h.title(), title);
+        h.tick(1);
+        assert.notEqual(h.title(), title, 'An aborted touch or completed press resumes automatically');
+    });
+}
+test('ending a pointer gesture preserves an explicit keyboard pause', t => {
+    const h = harness(t);
+    reveal(h);
+    const title = h.title();
+    h.key('p');
+    act(() => h.find('linkInteraction').props.onPointerDown());
+    act(() => h.find('linkInteraction').props.onPointerCancel());
+    h.tick(9000);
+    assert.equal(h.title(), title);
+    h.key('p');
+    h.tick(2000);
+    assert.notEqual(h.title(), title);
+});
+test('releasing a focused link keeps it paused until focus moves away', t => {
+    const h = harness(t);
+    reveal(h);
+    const title = h.title();
+    act(() => h.find('linkInteraction').props.onPointerDown());
+    act(() => h.find('linkInteraction').props.onFocus());
+    act(() => h.find('linkInteraction').props.onPointerUp());
+    h.tick(9000);
+    assert.equal(h.title(), title);
+    act(() => h.find('linkInteraction').props.onBlur());
+    h.tick(2000);
+    assert.notEqual(h.title(), title);
+});
+test('opening detail from a press cancels reveal work and does not leak its pause into replay', t => {
+    const h = harness(t);
+    reveal(h);
+    act(() => h.find('linkInteraction').props.onPointerDown());
+    act(() => h.details()[0].props.onClick());
+    h.tick(9000);
+    assert.equal(h.phase(), 'detail');
+    act(() => h.renderer.root.findAll(n => n.type === 'button' && n.props.className === 'back')[0].props.onClick());
+    assert.equal(h.phase(), 'collection');
+    h.key('r');
+    reveal(h);
+    const title = h.title();
+    h.tick(2000);
+    assert.notEqual(h.title(), title);
 });
 test('Escape returns embedded detail to collection, then disables the mode', t => {
     const h = harness(t);

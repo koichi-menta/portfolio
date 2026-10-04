@@ -2,13 +2,14 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import Image from "next/image";
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import { TbHandFinger, TbX } from "react-icons/tb";
 import worksData, { WorksData } from "src/works";
 import { device } from "src/constants/breakpoints";
 import { DOPAMINE_CONTROLS_SAFE_AREA, useDopamineMode } from "src/contexts/DopamineMode";
 import { createWorksAudio, playTick, unlock } from "src/lib/dopamineSound";
 import { WorkDetailContainer } from "src/components/container/WorkDetail";
+import { useReducedMotionPreference } from "src/hooks/useReducedMotionPreference";
 
 const LAUNCH_STAGGER_MS = 180;
 const COLLECTION_STAGGER_MS = 220;
@@ -38,7 +39,7 @@ type Props = ContainerProps & { className?: string };
 
 const Component = ({ className }: Props): JSX.Element => {
   const { isMuted, disable } = useDopamineMode();
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReducedMotionPreference();
   const [phase, setPhase] = useState<Phase>("intro");
   const phaseRef = useRef<Phase>("intro");
   const dialog = useRef<HTMLDialogElement>(null);
@@ -51,9 +52,10 @@ const Component = ({ className }: Props): JSX.Element => {
   const [manualPause, setManualPause] = useState(false);
   const [linkHovered, setLinkHovered] = useState(false);
   const [linkFocused, setLinkFocused] = useState(false);
+  const [linkPressed, setLinkPressed] = useState(false);
   const [pageHidden, setPageHidden] = useState(false);
   const autoTimer = useRef<number>();
-  const paused = manualPause || linkHovered || linkFocused || pageHidden;
+  const paused = manualPause || linkHovered || linkFocused || linkPressed || pageHidden;
   const stopAuto = () => window.clearTimeout(autoTimer.current);
   const drag = useRef<Drag | null>(null);
   const packElement = useRef<HTMLDivElement>(null);
@@ -86,6 +88,7 @@ const Component = ({ className }: Props): JSX.Element => {
     if (phaseRef.current !== "collection" && phaseRef.current !== "reveal") return;
     stopAuto();
     audio.current.stop();
+    setLinkPressed(false);
     collectionRestore.current = { scroll: phaseRef.current === "collection" ? sceneContent.current?.scrollTop || 0 : 0,
       slug: worksData[selected].slug };
     collectionHasPlayed.current = true;
@@ -105,6 +108,7 @@ const Component = ({ className }: Props): JSX.Element => {
     setManualPause(false);
     setLinkHovered(false);
     setLinkFocused(false);
+    setLinkPressed(false);
     setProgress(0);
     setIndex(0);
     collectionHasPlayed.current = false;
@@ -170,7 +174,10 @@ const Component = ({ className }: Props): JSX.Element => {
   useEffect(() => {
     const visibility = () => {
       stopAuto();
-      if (document.hidden) audio.current.stop();
+      if (document.hidden) {
+        audio.current.stop();
+        setLinkPressed(false);
+      }
       setPageHidden(document.hidden);
     };
     document.addEventListener("visibilitychange", visibility);
@@ -446,14 +453,14 @@ const Component = ({ className }: Props): JSX.Element => {
                   key={work.slug}
                   className="heroCard"
                   initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 90, scale: 0.55, rotateY: 110, rotate: -9 }}
-                  animate={reduceMotion ? { opacity: 1 } : {
+                  animate={reduceMotion ? { opacity: 1, y: 0, scale: 1, rotateY: 0, rotate: 0 } : {
                     opacity: [0, 0, 1, 1],
                     y: [90, 90, -12, 0],
                     scale: [0.55, 0.55, 1.08, 1],
                     rotateY: [110, 110, -10, 0],
                     rotate: [-9, -9, 3, 0],
                   }}
-                  transition={{ duration: reduceMotion ? 0.1 : 0.8, times: [0, 0.25, 0.75, 1], ease: "easeOut" }}
+                  transition={{ duration: reduceMotion ? 0 : 0.8, times: [0, 0.25, 0.75, 1], ease: "easeOut" }}
                 >
                   <div className="cardMeta">
                     <b>SSR ✦</b>
@@ -475,10 +482,12 @@ const Component = ({ className }: Props): JSX.Element => {
                       stopAuto();
                       setLinkHovered(true);
                     }}
-                    onPointerLeave={() => setLinkHovered(false)}
+                    onPointerLeave={() => { setLinkHovered(false); setLinkPressed(false); }}
                     onFocus={() => { stopAuto(); setLinkFocused(true); }}
-                    onBlur={() => setLinkFocused(false)}
-                    onPointerDown={() => { stopAuto(); setManualPause(true); }}
+                    onBlur={() => { setLinkFocused(false); setLinkPressed(false); }}
+                    onPointerDown={() => { stopAuto(); setLinkPressed(true); }}
+                    onPointerUp={() => setLinkPressed(false)}
+                    onPointerCancel={() => setLinkPressed(false)}
                   >
                     <WorkLink work={work} onDetail={() => showDetail(index)} />
                   </span>
