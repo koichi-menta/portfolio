@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import Image from "next/image";
 import Link from "next/link";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { TbHandFinger } from "react-icons/tb";
 import worksData, { WorksData } from "src/works";
 import { device } from "src/constants/breakpoints";
 import { useDopamineMode } from "src/contexts/DopamineMode";
@@ -40,6 +41,14 @@ const Component = ({ className }: Props): JSX.Element => {
   const closeButton = useRef<HTMLButtonElement>(null);
   const [progress, setProgress] = useState(0);
   const [index, setIndex] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [manualPause, setManualPause] = useState(false);
+  const [linkHovered, setLinkHovered] = useState(false);
+  const [linkFocused, setLinkFocused] = useState(false);
+  const [pageHidden, setPageHidden] = useState(false);
+  const autoTimer = useRef<number>();
+  const paused = manualPause || linkHovered || linkFocused || pageHidden;
+  const stopAuto = () => window.clearTimeout(autoTimer.current);
   const drag = useRef<Drag | null>(null);
   const openButton = useRef<HTMLButtonElement>(null);
   const nextButton = useRef<HTMLButtonElement>(null);
@@ -56,6 +65,7 @@ const Component = ({ className }: Props): JSX.Element => {
   const open = () => {
     if (phaseRef.current !== "sealed") return;
     drag.current = null;
+    setIsDragging(false);
     setProgress(1);
     unlock();
     if (!isMuted) playPop();
@@ -64,11 +74,17 @@ const Component = ({ className }: Props): JSX.Element => {
   const reset = () => {
     if (phaseRef.current === "collection") returnToReplay.current = true;
     drag.current = null;
+    stopAuto();
+    setIsDragging(false);
+    setManualPause(false);
+    setLinkHovered(false);
+    setLinkFocused(false);
     setProgress(0);
     setIndex(0);
     moveTo("intro");
   };
   const close = () => {
+    stopAuto();
     drag.current = null;
     moveTo("collection");
   };
@@ -113,10 +129,34 @@ const Component = ({ className }: Props): JSX.Element => {
         setPhase(next);
       },
       phase === "intro" ? (reduceMotion ? 800 : 2200)
-        : reduceMotion ? 0 : phase === "charging" ? 360 : 900,
+        : reduceMotion ? 0 : phase === "charging" ? 360 : 1100,
     );
     return () => window.clearTimeout(timer);
   }, [phase, reduceMotion]);
+
+  // A fresh timeout for each visible work prevents catch-up bursts after a pause.
+  // The last card gets its full second after the short entrance animation.
+  useEffect(() => {
+    if (phase !== "reveal" || paused) return;
+    autoTimer.current = window.setTimeout(() => {
+      if (phaseRef.current !== "reveal") return;
+      if (index < worksData.length - 1) setIndex(index + 1);
+      else moveTo("collection");
+    }, index === worksData.length - 1 && !reduceMotion ? 1200 : 1000);
+    return () => window.clearTimeout(autoTimer.current);
+  }, [phase, index, paused, reduceMotion]);
+
+  useEffect(() => {
+    const visibility = () => {
+      stopAuto();
+      setPageHidden(document.hidden);
+    };
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      stopAuto();
+      document.removeEventListener("visibilitychange", visibility);
+    };
+  }, []);
 
   useEffect(() => {
     if (phase === "reveal" && !isMuted) playReveal();
@@ -142,6 +182,7 @@ const Component = ({ className }: Props): JSX.Element => {
     )
       return;
     const bounds = event.currentTarget.getBoundingClientRect();
+    setIsDragging(true);
     drag.current = {
       id: event.pointerId,
       startX: event.clientX,
@@ -177,6 +218,7 @@ const Component = ({ className }: Props): JSX.Element => {
   const cancelTear = (event: React.PointerEvent<HTMLDivElement>) => {
     if (drag.current?.id !== event.pointerId) return;
     drag.current = null;
+    setIsDragging(false);
     if (phaseRef.current === "sealed") setProgress(0);
   };
   const work = worksData[index];
@@ -255,15 +297,16 @@ const Component = ({ className }: Props): JSX.Element => {
               {opened && <div className="burstRing" aria-hidden="true" />}
               {opened && (
                 <div className="flyingCards" aria-hidden="true">
-                  {worksData.slice(0, 7).map((item, i) => (
+                  {worksData.map((item, i) => (
                     <div
                       key={item.slug}
                       className="flyingCard"
                       style={
                         {
-                          "--fan-x": `${(i - Math.min(worksData.length - 1, 6) / 2) * 47}px`,
-                          "--fan-y": `${-95 + Math.pow(i - Math.min(worksData.length - 1, 6) / 2, 2) * 13}px`,
-                          "--fan-angle": `${(i - Math.min(worksData.length - 1, 6) / 2) * 13}deg`,
+                          "--fan-x": `${(i - (worksData.length - 1) / 2) * 52}px`,
+                          "--fan-y": `${-210 - i * 26}px`,
+                          "--fan-angle": `${(i - (worksData.length - 1) / 2) * 11}deg`,
+                          animationDelay: `${i * 55}ms`,
                         } as React.CSSProperties
                       }
                     >
@@ -324,6 +367,9 @@ const Component = ({ className }: Props): JSX.Element => {
                   <div className="tearTrack">
                     <i />
                   </div>
+                  {phase === "sealed" && !isDragging && progress === 0 && (
+                    <div className="swipeGuide"><TbHandFinger size={36} /></div>
+                  )}
                   <span>
                     {progress > 0
                       ? "そのまま、もう少し →"
@@ -338,7 +384,6 @@ const Component = ({ className }: Props): JSX.Element => {
             <div className="revealScene">
               <div className="revealHalo" aria-hidden="true" />
               <p className="revealLabel">SPECIAL SUPER RARE</p>
-              <AnimatePresence mode="wait">
                 <motion.article
                   key={work.slug}
                   className="heroCard"
@@ -362,7 +407,7 @@ const Component = ({ className }: Props): JSX.Element => {
                   }}
                   exit={{ opacity: 0 }}
                   transition={{
-                    duration: reduceMotion ? 0.1 : 0.48,
+                    duration: reduceMotion ? 0.1 : 0.18,
                     ease: "backOut",
                   }}
                 >
@@ -379,10 +424,28 @@ const Component = ({ className }: Props): JSX.Element => {
                   />
                   <h4>{work.title}</h4>
                   <p>{work.description}</p>
-                  <WorkLink work={work} />
+                  <span
+                    className="linkInteraction"
+                    onPointerEnter={(event) => {
+                      if (event.pointerType !== "mouse") return;
+                      stopAuto();
+                      setLinkHovered(true);
+                    }}
+                    onPointerLeave={() => setLinkHovered(false)}
+                    onFocus={() => { stopAuto(); setLinkFocused(true); }}
+                    onBlur={() => setLinkFocused(false)}
+                    onPointerDown={() => { stopAuto(); setManualPause(true); }}
+                  >
+                    <WorkLink work={work} />
+                  </span>
                   <div className="cardShine" aria-hidden="true" />
                 </motion.article>
-              </AnimatePresence>
+              <div className="autoControls">
+                <span role="status">{paused ? "自動送りを停止中" : "1秒ごとに作品を表示"}</span>
+                <button onClick={() => { stopAuto(); setManualPause(!manualPause); }}>
+                  {manualPause ? "自動送りを再開" : "一時停止"}
+                </button>
+              </div>
               <div className="revealActions">
                 <span>
                   {String(index + 1).padStart(2, "0")} /{" "}
@@ -392,6 +455,10 @@ const Component = ({ className }: Props): JSX.Element => {
                   ref={nextButton}
                   className="primary"
                   onClick={() => {
+                    stopAuto();
+                    setManualPause(true);
+                    setLinkHovered(false);
+                    setLinkFocused(false);
                     if (index < worksData.length - 1)
                       setIndex((current) =>
                         Math.min(current + 1, worksData.length - 1),
@@ -818,6 +885,20 @@ const StyledComponent = styled(Component)`
     background: #fff3a7;
     box-shadow: 0 0 14px 3px #fae1ab;
   }
+  .swipeGuide {
+    position: absolute;
+    top: 24px;
+    left: calc(50% - 18px);
+    color: #fff3b7;
+    filter: drop-shadow(0 2px 5px #1b0c32);
+    pointer-events: none;
+    animation: swipeGuide 1.6s ease-in-out infinite;
+  }
+  @keyframes swipeGuide {
+    0%, 15% { transform: translateX(-58px) rotate(-18deg); opacity: .5; }
+    60%, 75% { transform: translateX(58px) rotate(-18deg); opacity: 1; }
+    100% { transform: translateX(-58px) rotate(-18deg); opacity: .5; }
+  }
   .packShadow {
     position: absolute;
     bottom: -26px;
@@ -873,6 +954,8 @@ const StyledComponent = styled(Component)`
   .flyingCards {
     position: absolute;
     inset: 0;
+    z-index: 1;
+    pointer-events: none;
   }
   .flyingCard {
     position: absolute;
@@ -889,7 +972,7 @@ const StyledComponent = styled(Component)`
     align-items: center;
     justify-content: center;
     box-shadow: 0 0 20px #f1c88955;
-    animation: cardBurst 0.9s cubic-bezier(0.16, 0.8, 0.3, 1) both;
+    animation: cardBurst 0.85s cubic-bezier(0.1, 0.8, 0.2, 1) both;
   }
   .flyingCard span {
     color: #f1d49a;
@@ -1046,6 +1129,27 @@ const StyledComponent = styled(Component)`
     max-width: 340px;
     margin-top: 24px;
   }
+  .autoControls {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    max-width: 340px;
+    margin-top: 16px;
+    color: #c8bcd9;
+    font-size: 10px;
+  }
+  .autoControls button {
+    border: 1px solid #ffffff50;
+    border-radius: 99px;
+    padding: 8px 12px;
+    background: transparent;
+    color: #f3dcae;
+    font-size: 11px;
+  }
+  .linkInteraction { display: inline-block; }
   .revealActions > span {
     font-size: 11px;
     color: #b5a8c6;
@@ -1169,13 +1273,14 @@ const StyledComponent = styled(Component)`
   }
   @keyframes cardBurst {
     0% {
-      transform: translateY(35px) scale(0.7);
+      transform: translateY(70px) scale(0.75);
       opacity: 0;
     }
-    35% {
+    12% {
       opacity: 1;
     }
-    75% {
+    85% {
+      transform: translate(var(--fan-x), var(--fan-y)) rotate(var(--fan-angle)) scale(0.86);
       opacity: 1;
     }
     100% {

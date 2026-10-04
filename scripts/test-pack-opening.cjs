@@ -57,7 +57,9 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   let x = bounds.x + bounds.width / 2,
     y = bounds.y + bounds.height / 2;
   await page.mouse.move(x, y);
+  assert.equal(await page.locator('.swipeGuide').count(), 1);
   await page.mouse.down();
+  assert.equal(await page.locator('.swipeGuide').count(), 0, 'Guide hides during actual dragging');
   await page.mouse.move(x + 35, y);
   await page.mouse.up();
   assert.equal(
@@ -72,6 +74,12 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   await page.mouse.up();
   await phase(pack, "charging");
   await phase(pack, "burst");
+  assert.equal(await page.locator('.flyingCard').count(), 4);
+  await page.waitForTimeout(420);
+  assert.equal(await page.locator('.flyingCard').evaluateAll(cards => {
+    const origin = document.querySelector('.packScene').getBoundingClientRect().top;
+    return cards.every(card => card.getBoundingClientRect().top < origin);
+  }), true, 'Every work card launches upwards out of the pack');
   await page.screenshot({ path: path.join(out, "desktop-burst.png") });
   await phase(pack, "reveal");
   await page.locator(".heroCard").waitFor();
@@ -129,6 +137,44 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
     "Normal works list remains",
   );
   await context.close();
+
+  const auto = await setup();
+  await auto.page.mouse.move(5, 5);
+  await auto.page.evaluate(() => {
+    window.packEvents = [];
+    const observer = new MutationObserver(() => {
+      const phase = document.querySelector('section[data-phase]')?.dataset.phase;
+      const title = phase === 'reveal' ? document.querySelector('.heroCard h4')?.textContent : phase === 'collection' ? 'collection' : null;
+      if (title && window.packEvents.at(-1)?.title !== title) window.packEvents.push({title, time: performance.now()});
+    });
+    observer.observe(document.body, {subtree: true, childList: true, attributes: true});
+  });
+  await auto.page.getByRole('button', {name: 'ボタンでパックを開ける ↗', exact: true}).click();
+  await phase(auto.pack, 'collection');
+  const events = await auto.page.evaluate(() => window.packEvents);
+  assert.equal(events.length, 5, 'Four works followed by the collection, without clicks');
+  assert.equal(new Set(events.slice(0,4).map(event => event.title)).size, 4);
+  for (let i = 1; i < 4; i++) assert.ok(events[i].time - events[i-1].time >= 850 && events[i].time - events[i-1].time < 1350, 'One-second automatic work cadence');
+  assert.ok(events[4].time - events[3].time >= 1000, 'Last work remains for at least a second');
+  await auto.page.getByRole('button', {name: 'もう一度パックを開ける ↻', exact: true}).click();
+  await phase(auto.pack, 'sealed');
+  await auto.page.getByRole('button', {name: 'ボタンでパックを開ける ↗', exact: true}).click();
+  await phase(auto.pack, 'reveal');
+  await auto.page.locator('.heroCard .workLink').focus();
+  const heldTitle = await auto.page.locator('.heroCard h4').innerText();
+  await auto.page.waitForTimeout(1500);
+  assert.equal(await auto.page.locator('.heroCard h4').innerText(), heldTitle, 'Link keyboard focus pauses automatic changes');
+  await auto.page.getByRole('button', {name:'一時停止', exact:true}).click();
+  await auto.page.waitForTimeout(1300);
+  assert.equal(await auto.page.locator('.heroCard h4').innerText(), heldTitle, 'Explicit pause protects reading');
+  await auto.page.getByRole('button', {name:'自動送りを再開', exact:true}).click();
+  await auto.page.waitForTimeout(1100);
+  assert.notEqual(await auto.page.locator('.heroCard h4').innerText(), heldTitle);
+  await auto.page.keyboard.press('Escape');
+  await phase(auto.pack, 'collection');
+  await auto.page.waitForTimeout(1500);
+  await phase(auto.pack, 'collection');
+  await auto.context.close();
 
   const mobile = await setup({
     viewport: { width: 320, height: 740 },
@@ -200,6 +246,7 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
       .evaluate((el) => getComputedStyle(el).animationName),
     "none",
   );
+  assert.equal(await reduced.page.locator('.swipeGuide').evaluate(el => getComputedStyle(el).animationName), 'none');
   await reduced.page
     .getByRole("button", { name: "ボタンでパックを開ける ↗", exact: true })
     .click();
@@ -211,6 +258,9 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
       .evaluate((el) => getComputedStyle(el).animationName),
     "none",
   );
+  const reducedTitle = await reduced.page.locator('.heroCard h4').innerText();
+  await reduced.page.waitForTimeout(1100);
+  assert.notEqual(await reduced.page.locator('.heroCard h4').innerText(), reducedTitle, 'Reduced motion retains sequential works');
   await reduced.page.goBack();
   assert.equal(await reduced.page.evaluate(() => document.body.style.position), '', 'Back navigation unlocks scrolling');
   assert.equal(await reduced.page.locator('dialog:modal').count(), 0);
@@ -218,7 +268,7 @@ const baseURL = process.env.PACK_BASE_URL || "http://127.0.0.1:3000";
   await browser.close();
   assert.deepEqual(errors, [], "No browser runtime errors");
   console.log(
-    `PASS: fullscreen SSR intro, modal focus, scroll lock/recovery, mouse/touch tearing, short/canceled gestures, reveal/next/collection (${total} cards), replay, keyboard Escape, timer cleanup, mode disable, mobile overflow, reduced motion. Screenshots: ${out}`,
+    `PASS: swipe guide hides on drag, all 4 cards launch upwards, automatic 1000ms cadence/last card dwell/link pause/reading pause, fullscreen SSR intro, modal focus, scroll lock/recovery, mouse/touch tearing, short/canceled gestures, reveal/next/collection (${total} cards), replay, keyboard Escape, timer cleanup, mode disable, mobile overflow, reduced motion. Screenshots: ${out}`,
   );
 })().catch((error) => {
   console.error(error);
