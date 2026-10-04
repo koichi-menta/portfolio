@@ -10,10 +10,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:review": "node --test scripts/test-review-regressions.cjs scripts/test-review-faq-scroll.cjs scripts/test-review-rewind-audio.cjs scripts/test-review-works-modal.cjs scripts/test-review-motion-preference.cjs"
   },
   "dependencies": {
     "clsx": "^1.2.1",
+    "framer-motion": "^11",
     "next": "^15",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -32,6 +34,7 @@
     "eslint": "8.23.0",
     "eslint-config-next": "12.2.5",
     "playwright": "^1.54.1",
+    "react-test-renderer": "18.2.0",
     "reg-keygen-git-hash-plugin": "^0.12.1",
     "reg-suit": "^0.14",
     "typescript": "4.8.2"
