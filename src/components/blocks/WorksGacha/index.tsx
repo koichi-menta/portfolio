@@ -727,9 +727,19 @@ const StyledComponent = styled(Component)`
   }
   .packScene {
     position: relative;
+    /* 上の固定余白ではなく、パック自体を画面の縦中央に置く。
+       下の説明文と「正気に戻る」ボタンに重なる低い画面では、その分だけ上に逃がす。 */
+    --pack-height: 365px;
     width: 248px;
-    height: 365px;
-    margin: max(130px, calc((100dvh - 450px) / 2)) auto 0;
+    height: var(--pack-height);
+    margin: max(
+        80px,
+        calc(
+          min(50dvh - var(--pack-height) / 2, 100dvh - var(--pack-height) - 176px - env(safe-area-inset-bottom)) -
+            16px - env(safe-area-inset-top)
+        )
+      )
+      auto 0;
     perspective: 1000px;
   }
   .pack {
@@ -1269,7 +1279,7 @@ const StyledComponent = styled(Component)`
     .revealScene { padding-top: max(45px, calc((100dvh - 740px) / 2)); }
   }
   @media (max-height: 720px) {
-    .packScene { margin-top: 95px; height: 300px; width: 215px; }
+    .packScene { --pack-height: 300px; width: 215px; }
     .packTitle { margin-top: 18px; font-size: 38px; }
     .packCaption { margin-top: 9px; }
     .packFooter { bottom: 20px; }
