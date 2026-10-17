@@ -429,10 +429,10 @@ test('collection CSS uses two readable mobile columns and preserves four desktop
             return value;
         };
         for (const width of [320, 375, 390, 768, 1023]) {
-            assert.equal(valueAt(' .grid', 'grid-template-columns', width), 'repeat(2,minmax(0,1fr))');
+            assert.equal(valueAt(' .grid', 'grid-template-columns', width).replace(/\s+/g, ''), 'repeat(2,minmax(0,1fr))');
         }
         for (const width of [1024, 1440]) {
-            assert.equal(valueAt(' .grid', 'grid-template-columns', width), 'repeat(4,minmax(0,1fr))');
+            assert.equal(valueAt(' .grid', 'grid-template-columns', width).replace(/\s+/g, ''), 'repeat(4,minmax(0,1fr))');
         }
         for (const width of [320, 375, 390]) {
             assert.equal(valueAt(' .resultCard', 'min-width', width), '0');
