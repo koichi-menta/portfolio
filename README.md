@@ -12,3 +12,8 @@
 ## 遊び心のある演出
 
 ドーパミンモードでは、実績カードのパック開封や、山を登るタイムラインなどの演出を楽しめます。
+
+## セキュリティチェック
+
+Dependabot、Dependency Review、CodeQL、Gitleaksで依存関係・コード・シークレットを検査します。
+GitHub側で必要な初期設定と検出時の対応は[運用手順](.github/SECURITY_CHECKS.md)を参照してください。
