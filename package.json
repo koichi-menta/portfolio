@@ -25,7 +25,7 @@
     "react-dom": "18.2.0",
     "react-icons": "^4.8.0",
     "react-vertical-timeline-component": "^4.0.0",
-    "styled-components": "^5.3.5"
+    "styled-components": "^6.6.0"
   },
   "devDependencies": {
     "@babel/core": "^7.18.13",
