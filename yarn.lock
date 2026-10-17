@@ -790,18 +790,6 @@
   resolved "https://registry.yarnpkg.com/@img/sharp-win32-x64/-/sharp-win32-x64-0.34.5.tgz#a81ffb00e69267cd0a1d626eaedb8a8430b2b2f8"
   integrity sha512-+29YMsqY2/9eFEiW93eqWnuLcWcufowXewwSNIT6UwZdUUCrM3oFjMWH/Z6/TMmb4hlFenmfAVbpWeup2jryCw==
 
-"@isaacs/balanced-match@^4.0.1":
-  version "4.0.1"
-  resolved "https://registry.yarnpkg.com/@isaacs/balanced-match/-/balanced-match-4.0.1.tgz#3081dadbc3460661b751e7591d7faea5df39dd29"
-  integrity sha512-yzMTt9lEb8Gv7zRioUilSglI0c0smZ9k5D65677DLWLtWJaXIS3CqcGyUFByYKlnUj6TkjLVs54fBl6+TiGQDQ==
-
-"@isaacs/brace-expansion@^5.0.0":
-  version "5.0.0"
-  resolved "https://registry.yarnpkg.com/@isaacs/brace-expansion/-/brace-expansion-5.0.0.tgz#4b3dabab7d8e75a429414a96bd67bf4c1d13e0f3"
-  integrity sha512-ZT55BDLV0yv0RBm2czMiZ+SqCGO7AvmOM3G/w2xhVPH+te0aKgFjmBvGlL1dH+ql2tgGO3MVrbb3jCKyvpgnxA==
-  dependencies:
-    "@isaacs/balanced-match" "^4.0.1"
-
 "@isaacs/cliui@^8.0.2":
   version "8.0.2"
   resolved "https://registry.yarnpkg.com/@isaacs/cliui/-/cliui-8.0.2.tgz#b37667b7bc181c168782259bab42474fbf52b550"
@@ -978,14 +966,6 @@
   dependencies:
     "@types/node" "*"
 
-"@types/glob@^7.1.3":
-  version "7.2.0"
-  resolved "https://registry.yarnpkg.com/@types/glob/-/glob-7.2.0.tgz#bc1b5bf3aa92f25bd5dd39f35c57361bdce5b2eb"
-  integrity sha512-ZUxbzKl0IfJILTS6t7ip5fQQM/J3TJYubDm3nMbgubNNYS62eXeUpoLUC8/7fJNiFYHTrGPQn7hspDUzIHX3UA==
-  dependencies:
-    "@types/minimatch" "*"
-    "@types/node" "*"
-
 "@types/glob@^8.0.0":
   version "8.1.0"
   resolved "https://registry.yarnpkg.com/@types/glob/-/glob-8.1.0.tgz#b63e70155391b0584dce44e7ea25190bbc38f2fc"
@@ -1020,13 +1000,6 @@
   version "2.1.4"
   resolved "https://registry.yarnpkg.com/@types/mime-types/-/mime-types-2.1.4.tgz#93a1933e24fed4fb9e4adc5963a63efcbb3317a2"
   integrity sha512-lfU4b34HOri+kAY5UheuFMWPDOI+OPceBSHZKp69gEyTL/mmJ4cnU6Y/rlme3UL3GyOn6Y42hyIEw0/q8sWx5w==
-
-"@types/minimatch@*":
-  version "6.0.0"
-  resolved "https://registry.yarnpkg.com/@types/minimatch/-/minimatch-6.0.0.tgz#4d207b1cc941367bdcd195a3a781a7e4fc3b1e03"
-  integrity sha512-zmPitbQ8+6zNutpwgcQuLcsEpn/Cj54Kbn7L5pX0Os5kdWplB7xPgEh/g+SWOB/qmows2gpuCaPyduq8ZZRnxA==
-  dependencies:
-    minimatch "*"
 
 "@types/minimatch@^5.1.2":
   version "5.1.2"
@@ -2354,11 +2327,6 @@ fs.realpath@^1.0.0:
   resolved "https://registry.yarnpkg.com/fs.realpath/-/fs.realpath-1.0.0.tgz#1504ad2523158caa40db4a2787cb01411994ea4f"
   integrity sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==
 
-fsevents@2.3.2:
-  version "2.3.2"
-  resolved "https://registry.yarnpkg.com/fsevents/-/fsevents-2.3.2.tgz#8a526f78b8fdf4623b709e0b975c52c24c02fd1a"
-  integrity sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==
-
 function-bind@^1.1.2:
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/function-bind/-/function-bind-1.1.2.tgz#2c02d864d97f3ea6c8830c464cbd11ab6eab7a1c"
@@ -3218,13 +3186,6 @@ min-indent@^1.0.0:
   resolved "https://registry.yarnpkg.com/min-indent/-/min-indent-1.0.1.tgz#a63f681673b30571fbe8bc25686ae746eefa9869"
   integrity sha512-I9jwMn07Sy/IwOj3zVkVik2JTvgpaykDZEigL6Rx6N9LbMywwUSMtxET+7lVoDLLd3O3IXwJwvuuns8UB/HeAg==
 
-minimatch@*:
-  version "10.0.3"
-  resolved "https://registry.yarnpkg.com/minimatch/-/minimatch-10.0.3.tgz#cf7a0314a16c4d9ab73a7730a0e8e3c3502d47aa"
-  integrity sha512-IPZ167aShDZZUMdRk66cyQAW3qr0WzbHkPdMYa8bzZhlHhO3jALbKdxcaak7W9FfT2rZNpQuUu4Od7ILEpXSaw==
-  dependencies:
-    "@isaacs/brace-expansion" "^5.0.0"
-
 minimatch@^3.0.4, minimatch@^3.1.1, minimatch@^3.1.2:
   version "3.1.2"
   resolved "https://registry.yarnpkg.com/minimatch/-/minimatch-3.1.2.tgz#19cd194bfd3e428f049a70817c038d89ab4be35b"
@@ -3610,19 +3571,17 @@ pkg-dir@^4.1.0:
   dependencies:
     find-up "^4.0.0"
 
-playwright-core@1.54.1:
-  version "1.54.1"
-  resolved "https://registry.yarnpkg.com/playwright-core/-/playwright-core-1.54.1.tgz#d32edcce048c9d83ceac31e294a7b60ef586960b"
-  integrity sha512-Nbjs2zjj0htNhzgiy5wu+3w09YetDx5pkrpI/kZotDlDUaYk0HVA5xrBVPdow4SAUIlhgKcJeJg4GRKW6xHusA==
+playwright-core@1.64.0:
+  version "1.64.0"
+  resolved "https://registry.yarnpkg.com/playwright-core/-/playwright-core-1.64.0.tgz#a765f91dabd2b2cadd67e87439842c1d6c72c652"
+  integrity sha512-T9r+MZkTECl2+oUcZ26YgZzTrYidTsIhYYkJix+6iDOymOb1FB2RLLSOxRGnZGv5DStt+aduIVbt+E8WygXYpg==
 
-playwright@^1.54.1:
-  version "1.54.1"
-  resolved "https://registry.yarnpkg.com/playwright/-/playwright-1.54.1.tgz#128d66a8d5182b5330e6440be3a72ca313362788"
-  integrity sha512-peWpSwIBmSLi6aW2auvrUtf2DqY16YYcCMO8rTVx486jKmDTJg7UAhyrraP98GB8BoPURZP8+nxO7TSd4cPr5g==
+playwright@^1.64.0:
+  version "1.64.0"
+  resolved "https://registry.yarnpkg.com/playwright/-/playwright-1.64.0.tgz#c105a3ffe174d487a5927a6836a79778b1180742"
+  integrity sha512-kVzTnYFYEyQ9RGzBjNCd2+yEqWmVbxl3AHPynv3qQ6JTjv4a+kwRcnqQwIpuP3NnrnIrE/Q6wWAIAvMfIE2/Yg==
   dependencies:
-    playwright-core "1.54.1"
-  optionalDependencies:
-    fsevents "2.3.2"
+    playwright-core "1.64.0"
 
 pngjs@^6.0.0:
   version "6.0.0"
@@ -3820,41 +3779,22 @@ reg-cli@^0.18.5:
     xmlbuilder2 "^3.1.1"
     yargs-parser "^21.0.1"
 
-reg-keygen-git-hash-plugin@^0.12.1:
-  version "0.12.2"
-  resolved "https://registry.yarnpkg.com/reg-keygen-git-hash-plugin/-/reg-keygen-git-hash-plugin-0.12.2.tgz#83c5213ffa662ae12ec2c96383ed21bb3ea8d113"
-  integrity sha512-REhCb3oogjEatS6VkJsJehMKJYZrhiQWh+MCshJrQfIUYtk43hxfc7EEGfTUk5Ji8/nO6ir5TDPiM54ZOPC1tw==
+reg-keygen-git-hash-plugin@^0.14.5:
+  version "0.14.5"
+  resolved "https://registry.yarnpkg.com/reg-keygen-git-hash-plugin/-/reg-keygen-git-hash-plugin-0.14.5.tgz#dde5694b843f7fab6322952954fc5769699b2087"
+  integrity sha512-7XcF/JPoHmLlQ/Px80BCQdTyfbeDiNmI9/u5sSC6rqvuxbZ/d9IjCz83ELRc832mHtuG3uRQCGXR1/HrV7h31A==
   dependencies:
-    reg-suit-util "^0.12.2"
+    reg-suit-util "^0.14.3"
     shell-escape "^0.2.0"
 
-reg-suit-core@^0.14.4:
-  version "0.14.4"
-  resolved "https://registry.yarnpkg.com/reg-suit-core/-/reg-suit-core-0.14.4.tgz#7c1c9598014d204ae7a2761384dcc599a4963b2c"
-  integrity sha512-1QTqsMfFbWrlM4N7aRM+GTc5ilbPCh4ffDUpJzDKGcovpapiVUOzpUAsmT1Q34TrFHcWtx+ZEFKWMHgtomSW0Q==
+reg-suit-core@^0.14.5:
+  version "0.14.5"
+  resolved "https://registry.yarnpkg.com/reg-suit-core/-/reg-suit-core-0.14.5.tgz#a83b687afce94cede42baee4f4a6e9083f4888c7"
+  integrity sha512-7wIA+bcggLfcPqkMyWfKKYYfQClIQ2gKgyD/LujinyKUZesOyZ3sYd3UPlWB0SBxViNgDtQ5C50EkyCKUW2e3g==
   dependencies:
     reg-cli "^0.18.5"
     reg-suit-util "^0.14.3"
     rimraf "^5.0.1"
-
-reg-suit-util@^0.12.2:
-  version "0.12.2"
-  resolved "https://registry.yarnpkg.com/reg-suit-util/-/reg-suit-util-0.12.2.tgz#e5a0f4a9a2d5944e6c572e4af810de2209089820"
-  integrity sha512-1PUzeH7Uddwv9e1ns9x8qgbp6FzJqqau6AckVCLg3XiS2BvAgrh7RgJ7UNxBT+4m0UWzc7bYRyJTw4F31ihklA==
-  dependencies:
-    "@types/cli-progress" "^3.8.0"
-    "@types/cli-spinner" "^0.2.0"
-    "@types/glob" "^7.1.3"
-    "@types/lodash" "^4.14.161"
-    "@types/mime-types" "^2.1.0"
-    "@types/mkdirp" "^1.0.1"
-    chalk "^4.1.0"
-    cli-progress "^3.8.2"
-    cli-spinner "^0.2.6"
-    glob "^7.1.6"
-    lodash "^4.17.20"
-    mime-types "^2.1.27"
-    mkdirp "^1.0.4"
 
 reg-suit-util@^0.14.3:
   version "0.14.3"
@@ -3876,14 +3816,14 @@ reg-suit-util@^0.14.3:
     mkdirp "^1.0.4"
 
 reg-suit@^0.14:
-  version "0.14.4"
-  resolved "https://registry.yarnpkg.com/reg-suit/-/reg-suit-0.14.4.tgz#c8e9e488e305c51c96b7733e4dafc2e3e9388e39"
-  integrity sha512-2SdAe7MX5whfEvqkf29Z0dSbIlorfJhPPZt9WEHNvM+CtdPYZJjQaswh2Xjt7uMTrUey0FCELmC7nLY6zUMK3Q==
+  version "0.14.5"
+  resolved "https://registry.yarnpkg.com/reg-suit/-/reg-suit-0.14.5.tgz#cab2b04f9042ab1bffba4b1ccda863037fc99d28"
+  integrity sha512-AWenzVuJ/MBUt8Ejaaom7SDN8PF71seIjIBBnYcdPcrs5CHEuCAERCCkv6EgEuU85vXS5gc0XzuJVMbj3ay0hQ==
   dependencies:
     cp-file "9.1.0"
     ignore "5.3.1"
     inquirer "8.2.6"
-    reg-suit-core "^0.14.4"
+    reg-suit-core "^0.14.5"
     reg-suit-util "^0.14.3"
     yargs "17.0.1"
 
