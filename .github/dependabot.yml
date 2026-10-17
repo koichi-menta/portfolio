@@ -8,6 +8,11 @@ updates:
       time: "09:00"
       timezone: Asia/Tokyo
     open-pull-requests-limit: 5
+    ignore:
+      # Keep Node.js types aligned with the runtime in .node-version.
+      - dependency-name: "@types/node"
+        update-types:
+          - version-update:semver-major
     groups:
       development-dependencies:
         dependency-type: development

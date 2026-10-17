@@ -4,6 +4,7 @@
 
 | チェック | 対象・動作 | 実行タイミング |
 | --- | --- | --- |
+| CI | `.node-version`のNode.js 24で型チェック・lint・回帰テスト・本番ビルドを実行する | 全PR、mainへのpush、手動 |
 | Dependency Review | PRで追加・更新する依存関係を検査し、High / Criticalの既知の脆弱性で失敗する。開発用依存も対象 | 全PR |
 | CodeQL | JavaScript / TypeScriptを`security-extended`で解析し、結果をGitHubのSecurityタブに登録する | 全PR、mainへのpush、毎週月曜09:30 JST、手動 |
 | Gitleaks | コミットに含まれるシークレットを検出すると失敗する。PR・pushは変更範囲、定期・手動実行は取得した全履歴を検査する | 全PR、mainへのpush、毎週月曜10:00 JST、手動 |

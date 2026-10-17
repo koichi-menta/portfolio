@@ -2,6 +2,9 @@
   "name": "portfolio",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "resolutions": {
     "@types/react": "18.0.17",
     "@types/react-dom": "18.0.6"
@@ -11,6 +14,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "next typegen && tsc --noEmit",
     "test:review": "node --test scripts/test-review-regressions.cjs scripts/test-review-faq-scroll.cjs scripts/test-review-rewind-audio.cjs scripts/test-review-works-modal.cjs scripts/test-review-motion-preference.cjs"
   },
   "dependencies": {
@@ -25,19 +29,19 @@
   },
   "devDependencies": {
     "@babel/core": "^7.18.13",
-    "@types/node": "18.7.14",
+    "@types/node": "24.19.2",
     "@types/react": "18.0.17",
     "@types/react-dom": "18.0.6",
     "@types/react-vertical-timeline-component": "^3.3.3",
     "@types/styled-components": "^5.1.26",
     "babel-loader": "^8.2.5",
-    "eslint": "8.23.0",
-    "eslint-config-next": "12.2.5",
+    "eslint": "8.57.1",
+    "eslint-config-next": "15.5.28",
     "playwright": "^1.64.0",
     "react-test-renderer": "18.2.0",
     "reg-keygen-git-hash-plugin": "^0.14.5",
     "reg-suit": "^0.14",
-    "typescript": "4.8.2"
+    "typescript": "5.9.3"
   },
   "packageManager": "yarn@1.22.22+sha1.ac34549e6aa8e7ead463a7407e1c7390f61a6610"
 }
