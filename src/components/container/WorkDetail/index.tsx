@@ -104,7 +104,7 @@ const StyledComponent = styled(Component)`
       height: 40px;
       color: #444;
       border-radius: 50%;
-      :hover {
+      &:hover {
         background-color: #f0f0ea;
       }
     }
@@ -200,7 +200,7 @@ const StyledComponent = styled(Component)`
       @media (${device.tablet}) {
         width: 240px;
       }
-      :hover {
+      &:hover {
         background-color: #fafafa;
       }
     }

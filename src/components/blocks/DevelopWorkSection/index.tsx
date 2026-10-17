@@ -145,7 +145,7 @@ const StyledComponent = styled(Component)`
             border: 1px solid #333;
             padding: 8px;
             border-radius: 5px;
-            :hover {
+            &:hover {
               background-color: #fafafa;
             }
           }
