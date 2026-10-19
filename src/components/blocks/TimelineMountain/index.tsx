@@ -47,14 +47,11 @@ const SUMMIT = { x: 500, y: 200 };
 const NOW_POINT = { x: 500, y: 90 };
 const FOOT = { x: 500, y: 1350 };
 // 古い順に、ふもとから頂上へ向かう山道の曲がり角に置く
-const EVENT_POINTS = [
-  { x: 320, y: 1230 },
-  { x: 650, y: 1080 },
-  { x: 380, y: 930 },
-  { x: 610, y: 780 },
-  { x: 430, y: 630 },
-  { x: 570, y: 480 },
-];
+const EVENT_X = [320, 650, 380, 610, 430, 570];
+const EVENT_POINTS = timelineData.map((_, i) => ({
+  x: EVENT_X[i % EVENT_X.length],
+  y: 1230 - (750 * i) / Math.max(timelineData.length - 1, 1),
+}));
 
 type Point = { x: number; y: number };
 

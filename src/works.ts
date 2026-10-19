@@ -21,13 +21,57 @@ export type WorksData = {
   slug: string;
   title: string;
   src: string;
+  imageKind?: "appIcon";
   genre: GenreProps[];
   description: string;
   href: string;
+  linkLabel?: string;
   detail?: WorkDetail;
 };
 
 const works: WorksData[] = [
+  {
+    slug: "machidoki",
+    title: "イベントカウントダウンアプリ「まちどき」",
+    src: "/images/work_machidoki.png",
+    imageKind: "appIcon",
+    genre: [
+      { type: "platform", label: "iOS App" },
+      { type: "default", label: "Tauri 2" },
+      { type: "default", label: "TypeScript" },
+      { type: "default", label: "Rust" },
+      { type: "default", label: "Swift" },
+      { type: "default", label: "WidgetKit" },
+      { type: "default", label: "SQLite" },
+    ],
+    description: "映画の公開やグッズの発売など、楽しみにしている予定まで「あと何日」がひと目でわかるiOSアプリ。写真付きのイベント登録やウィジェットに対応し、App Storeで公開しています。",
+    href: "https://apps.apple.com/jp/app/id6820056211",
+    linkLabel: "App Storeで見る",
+    detail: {
+      overview: `「まちどき」は、楽しみにしているイベントまでの日数をカウントダウンするiOSアプリです。
+映画の公開日やグッズの発売日などを登録すると、当日まで「あと何日」かを表示します。イベントには写真を設定でき、ホーム画面やロック画面のウィジェットからも確認できます。
+リマインダーや繰り返し予定、カウントダウン画像の共有にも対応しています。無料で利用でき、広告視聴による登録枠の追加と、買い切りの無制限プランを用意しています。`,
+      background: `映画の公開やグッズの発売情報を見て楽しみにしていても、カレンダーへの登録が面倒で、そのまま忘れてしまうことがありました。登録していても、来月以降の予定は今月のカレンダーに表示されず、目に入る機会が少なくなってしまいます。
+また、「○月○日発売」と日付で書かれていても、今日からどれくらい先なのか分かりにくく感じていました。
+楽しみな予定を忘れずに、当日まで「あと何日」かを簡単に確認できるものがあればいいなと思い開発しました。`,
+      techStack: [
+        { category: "アプリ基盤", items: ["Tauri 2", "Rust"] },
+        { category: "フロントエンド", items: ["TypeScript", "Vite", "HTML", "CSS"] },
+        { category: "iOS連携", items: ["Swift"] },
+        { category: "ウィジェット", items: ["SwiftUI", "WidgetKit", "App Intents"] },
+        { category: "データ保存・共有", items: ["SQLite", "App Groups"] },
+        { category: "アプリ内課金", items: ["StoreKit 2"] },
+        { category: "広告", items: ["Google AdMob", "UMP"] },
+        { category: "ローカル通知", items: ["UserNotifications"] },
+      ],
+      challenges: [
+        {
+          title: "App Store Connectの各種設定と公開までの準備",
+          body: "アプリの実装に加えて、App Store Connectで公開に必要な各種設定を進めるところに苦労しました。設定項目が多く、それぞれの意味や必要な作業を確認しながら、一つずつ対応してリリースまで進めました。",
+        },
+      ],
+    },
+  },
   {
     slug: "post-cue-studio",
     title: "X運用アプリ「post-cue-studio」",
