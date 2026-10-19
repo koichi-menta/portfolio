@@ -58,7 +58,7 @@ jobs:
           node -e 'const fs = require("node:fs"); const { packageManager } = require("./package.json"); fs.writeFileSync(process.argv[1], JSON.stringify({ name: "takumi-guard-probe", private: true, packageManager }));' "$probe_dir/package.json"
           # The official harmless test package must be rejected, even with an empty cache.
           if yarn --cwd "$probe_dir" add @panda-guard/test-malicious \
-            --ignore-scripts --non-interactive --no-progress \
+            --ignore-scripts --non-interactive --no-progress --verbose \
             --cache-folder "$probe_dir/cache" > "$probe_dir/install.log" 2>&1; then
             cat "$probe_dir/install.log"
             echo "::error::Takumi Guard did not block the test package"
@@ -66,7 +66,8 @@ jobs:
           fi
           cat "$probe_dir/install.log"
           grep -F 'https://npm.flatt.tech/' "$probe_dir/install.log"
-          grep -E '403|Forbidden' "$probe_dir/install.log"
+          grep -F 'finished with status code 403' "$probe_dir/install.log"
+          grep -F 'Package blocked by security policy' "$probe_dir/install.log"
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile --non-interactive
