@@ -5,6 +5,7 @@
 | チェック | 対象・動作 | 実行タイミング |
 | --- | --- | --- |
 | CI | `.node-version`のNode.js 24で型チェック・lint・回帰テスト・本番ビルドを実行する | 全PR、mainへのpush、手動 |
+| Takumi Guard | 公開npmパッケージをプロキシ経由で取得し、既知の悪意あるパッケージをブロックする。CIでは公式の無害なテストパッケージの403拒否も確認する | ローカルのインストール、CI |
 | Dependency Review | PRで追加・更新する依存関係を検査し、High / Criticalの既知の脆弱性で失敗する。開発用依存も対象 | 全PR |
 | CodeQL | JavaScript / TypeScriptを`security-extended`で解析し、結果をGitHubのSecurityタブに登録する | 全PR、mainへのpush、毎週月曜09:30 JST、手動 |
 | Gitleaks | コミットに含まれるシークレットを検出すると失敗する。PR・pushは変更範囲、定期・手動実行は取得した全履歴を検査する | 全PR、mainへのpush、毎週月曜10:00 JST、手動 |
@@ -25,7 +26,8 @@ Gitleaksのログでは検出したシークレット値がマスクされる。
 2. CodeQLのDefault setupを使っている場合は無効にし、このリポジトリのワークフローによるAdvanced setupを使う。
 3. マージ後、ActionsからGitleaksを手動実行し、全履歴を初回検査する。
 4. 各チェックが一度実行された後、mainのRulesetまたはBranch protectionで
-   `Dependency Review`と`Gitleaks`を必須ステータスチェックにする。
+   `Dependency Review`、`Gitleaks`、`Node.js 24 checks`を必須ステータスチェックにする。
+   Takumi Guardのブロックや接続障害でCIが失敗したPRも、これによりマージを防ぐ。
 5. CodeQLの検出結果を確認・整理してから、mainのRulesetの
    `Require code scanning results`でCodeQLを指定し、High / Criticalをブロックする。
    `CodeQL (JavaScript / TypeScript)`の成功は解析処理の成功を意味し、脆弱性がないことは保証しない。
@@ -37,6 +39,13 @@ CodeQL / Dependency Reviewの利用条件とGitleaks Actionのライセンス条
 
 ## 検出時の対応
 
+- Takumi Guardは匿名モードで利用し、トークンやOIDC権限は追加しない。
+  `.npmrc`と`yarn.lock`の取得先を`https://npm.flatt.tech/`に揃える。
+  導入前のキャッシュは一度`yarn cache clean`で削除する。CIでは依存キャッシュを復元しない。
+  今後の依存更新でもロックファイルが通常レジストリを直接参照していないことを確認する。
+  プロキシに接続できない場合も、通常レジストリへの自動フォールバックは行わない。
+  インストール後に判明した脆弱性や、未検出の悪意あるパッケージをすべて防ぐ仕組みではないため、
+  Dependency Review・Dependabotと併用する。
 - High / Criticalを優先して修正し、依存の更新後は既存テストとビルドを確認してからマージする。
   通常のDependabot PRも自動マージせず、変更内容と動作を確認する。
 - シークレットが見つかった場合は、先に該当キーを失効・再発行する。

@@ -35,6 +35,39 @@ jobs:
       - name: Enable Yarn from packageManager
         run: corepack enable
 
+      - name: Set up Takumi Guard
+        uses: flatt-security/setup-takumi-guard-npm@14f07d0cbc739b42a1b7c70a04c2b84cd1318ddd # v1
+
+      - name: Verify Takumi Guard blocking
+        shell: bash
+        run: |
+          test "$(npm config get registry)" = "https://npm.flatt.tech/"
+          # Reject lockfile changes that would download packages outside the proxy.
+          node <<'NODE'
+          const assert = require('node:assert/strict');
+          const fs = require('node:fs');
+          const urls = [...fs.readFileSync('yarn.lock', 'utf8').matchAll(/^  resolved "([^"]+)"/gm)];
+          assert.ok(urls.length > 0, 'Expected locked package URLs');
+          for (const [, url] of urls) {
+            assert.equal(new URL(url).origin, 'https://npm.flatt.tech', `Package bypasses Takumi Guard: ${url}`);
+          }
+          NODE
+          probe_dir=$(mktemp -d)
+          trap 'rm -rf "$probe_dir"' EXIT
+          cp .npmrc "$probe_dir/.npmrc"
+          node -e 'const fs = require("node:fs"); const { packageManager } = require("./package.json"); fs.writeFileSync(process.argv[1], JSON.stringify({ name: "takumi-guard-probe", private: true, packageManager }));' "$probe_dir/package.json"
+          # The official harmless test package must be rejected, even with an empty cache.
+          if yarn --cwd "$probe_dir" add @panda-guard/test-malicious \
+            --ignore-scripts --non-interactive --no-progress \
+            --cache-folder "$probe_dir/cache" > "$probe_dir/install.log" 2>&1; then
+            cat "$probe_dir/install.log"
+            echo "::error::Takumi Guard did not block the test package"
+            exit 1
+          fi
+          cat "$probe_dir/install.log"
+          grep -F 'https://npm.flatt.tech/' "$probe_dir/install.log"
+          grep -E '403|Forbidden' "$probe_dir/install.log"
+
       - name: Install dependencies
         run: yarn install --frozen-lockfile --non-interactive
 
