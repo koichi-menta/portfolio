@@ -32,5 +32,12 @@ GitHub Actionsでも`.node-version`のNode.jsで同じチェックを実行し�
 
 ## セキュリティチェック
 
+公開npmパッケージは、リポジトリの`.npmrc`で指定した[Takumi Guard](https://shisho.dev/docs/ja/t/guard/quickstart/npm/)経由で取得します。
+ローカルの`yarn install` / `yarn add`とCIの両方に適用し、既知の悪意あるパッケージをブロックします。
+匿名モードのためアカウント・トークンは不要で、ダウンロード追跡や侵害通知は利用しません。
+導入前から使っている環境では、一度`yarn cache clean`を実行してからインストールしてください。
+クラウドや社内ネットワークで通信先が制限されている場合は、`npm.flatt.tech`へのHTTPS通信を許可してください。
+プロキシ接続が失敗した場合は通常レジストリへ切り替えず、接続設定を確認します。
+
 Dependabot、Dependency Review、CodeQL、Gitleaksで依存関係・コード・シークレットを検査します。
 GitHub側で必要な初期設定と検出時の対応は[運用手順](.github/SECURITY_CHECKS.md)を参照してください。
