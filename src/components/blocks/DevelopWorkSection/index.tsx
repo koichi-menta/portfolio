@@ -19,7 +19,7 @@ const Component = ({ className }: Props): JSX.Element => (
         return (
           <div className="item" key={index}>
             <div className="image">
-              <Image src={item.src} width={500} height={300} alt="" />
+              <Image src={item.src} width={500} height={300} alt="" style={item.imageKind === "appIcon" ? { width: "60%", marginInline: "20%", aspectRatio: "1", borderRadius: "22%", backgroundColor: "transparent" } : undefined} />
             </div>
             <div className="detail">
               <div className="contents">
@@ -49,7 +49,7 @@ const Component = ({ className }: Props): JSX.Element => (
                       rel="noreferrer"
                       href={item.href}
                     >
-                      サイトを見る
+                      {item.linkLabel || "サイトを見る"}
                     </a>
                   )}
                 </div>

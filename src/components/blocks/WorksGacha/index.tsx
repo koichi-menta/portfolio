@@ -468,6 +468,7 @@ const Component = ({ className }: Props): JSX.Element => {
                   </div>
                   <Image
                     src={work.src}
+                    style={work.imageKind === "appIcon" ? { width: "60%", marginInline: "20%", aspectRatio: "1", borderRadius: "22%" } : undefined}
                     width={500}
                     height={300}
                     alt=""
@@ -540,7 +541,7 @@ const Component = ({ className }: Props): JSX.Element => {
                   <b>SSR ✦</b>
                   <span>No. {String(i + 1).padStart(2, "0")}</span>
                 </div>
-                <Image src={item.src} width={500} height={300} alt="" />
+                <Image src={item.src} width={500} height={300} alt="" style={item.imageKind === "appIcon" ? { width: "60%", marginInline: "20%", aspectRatio: "1", borderRadius: "22%" } : undefined} />
                 <h4>{item.title}</h4>
                 <p>{item.description}</p>
                 <WorkLink work={item} onDetail={() => showDetail(i)} disabled={celebrateCollection} />

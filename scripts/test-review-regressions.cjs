@@ -9,6 +9,7 @@ const React = require("react");
 const { create, act } = require("react-test-renderer");
 
 const root = path.resolve(__dirname, "..");
+const timelineCount = require("../src/timeline.json").length;
 const element = React.createElement;
 const fragment = ({ children }) => element(React.Fragment, null, children);
 const Link = ({ children, ...props }) => element("a", props, children);
@@ -162,10 +163,14 @@ for (const [before, after, expected] of [[false, true, 0], [true, false, 1], [fa
 test("timeline nodes disable during intro/replay and enable after skip/completion", t => {
   const scene = timelineHarness(t, true);
   const disabled = expected => {
-    assert.equal(scene.nodes().length, 7);
+    assert.equal(scene.nodes().length, timelineCount + 1);
     assert.ok(scene.nodes().every(node => node.props.disabled === expected));
   };
   disabled(true);
+  for (const node of scene.nodes().filter(node => node.props.className.includes("node"))) {
+    assert.ok(Number.isFinite(node.props.style.left));
+    assert.ok(Number.isFinite(node.props.style.top));
+  }
   scene.tick(500);
   disabled(true);
   scene.click("skip");
@@ -173,7 +178,7 @@ test("timeline nodes disable during intro/replay and enable after skip/completio
   act(() => scene.renderer.root.findAllByType("button").find(node => node.props.children === "もう一度見る").props.onClick());
   disabled(true);
   scene.tick(2700);
-  for (let i = 0; i < 6; i += 1) {
+  for (let i = 0; i < timelineCount; i += 1) {
     disabled(true);
     scene.tick(1000);
   }

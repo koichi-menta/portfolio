@@ -25,7 +25,7 @@ const Component = ({ className, work, onBack }: Props): JSX.Element => (
       <Title>{work.title}</Title>
     </div>
     <div className="image">
-      <Image src={work.src} width={800} height={480} alt="" />
+      <Image src={work.src} width={800} height={480} alt="" style={work.imageKind === "appIcon" ? { width: "60%", marginInline: "20%", aspectRatio: "1", borderRadius: "22%", backgroundColor: "transparent" } : undefined} />
     </div>
     <div className="genre">
       {work.genre.map((genre, index) => (
@@ -74,7 +74,7 @@ const Component = ({ className, work, onBack }: Props): JSX.Element => (
     <div className="actions">
       {work.href && (
         <a className="link" target="_blank" rel="noreferrer" href={work.href}>
-          サイトを見る
+          {work.linkLabel || "サイトを見る"}
         </a>
       )}
       {onBack ? <button className="link" onClick={onBack}>作品一覧に戻る</button> : <Link className="link" href="/works">

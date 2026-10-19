@@ -23,6 +23,7 @@ function load(relative, mocks, cache = new Map()) {
     vm.runInThisContext(`(function(require,module,exports){${js}\n})`, { filename: file })(requireModule, module, module.exports);
     return module.exports;
 }
+const workCount = load('src/works.ts', {}).default.length;
 function harness(t, { reduced = false, realReducedHook = false } = {}) {
     t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
     const oldWindow = global.window, oldDocument = global.document;
@@ -92,7 +93,7 @@ test('automatic cards retain a stable focus target without stealing user focus',
     h.tick(2000);
     assert.equal(h.focuses.at(-1).children, '正気に戻る');
 });
-test('reveal timer restarts with a full hold after hidden tab, then reaches all 4 cards', t => {
+test('reveal timer restarts with a full hold after hidden tab, then reaches every card', t => {
     const h = harness(t);
     reveal(h);
     const first = h.title();
@@ -105,9 +106,8 @@ test('reveal timer restarts with a full hold after hidden tab, then reaches all 
     assert.equal(h.title(), first);
     h.tick(1);
     assert.notEqual(h.title(), first);
-    h.tick(2000);
-    h.tick(2000);
-    h.tick(2000);
+    for (let i = 1; i < workCount; i++)
+        h.tick(2000);
     assert.equal(h.phase(), 'collection');
     h.finishCollection();
     assert.ok(h.details().every(n => !n.props.disabled));
@@ -115,10 +115,10 @@ test('reveal timer restarts with a full hold after hidden tab, then reaches all 
 test('all embedded detail returns restore collection scroll and focus', t => {
     const h = harness(t);
     reveal(h);
-    for (let i = 0; i < 4; i++)
+    for (let i = 0; i < workCount; i++)
         h.tick(2000);
     h.finishCollection();
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < workCount; i++) {
         h.sceneNode.scrollTop = 987;
         const link = h.details()[i], slug = link.props['data-work'];
         act(() => link.props.onClick());
@@ -142,11 +142,11 @@ test('unmount cancels all scheduled scene updates, closes dialog and restores bo
 test('collection fallback enables details even without animationend', t => {
     const h = harness(t);
     reveal(h);
-    for (let i = 0; i < 4; i++)
+    for (let i = 0; i < workCount; i++)
         h.tick(2000);
     assert.equal(h.phase(), 'collection');
     assert.ok(h.details().every(n => n.props.disabled));
-    h.tick(750 + 3 * 220);
+    h.tick(750 + (workCount - 1) * 220);
     assert.ok(h.details().every(n => !n.props.disabled));
     assert.equal(h.find('collection settled').props.className, 'collection settled');
 });
@@ -158,7 +158,7 @@ test('live reduced motion before opening skips charging and all hero transforms'
     assert.equal(h.phase(), 'reveal');
     assert.deepEqual(h.find('heroCard').props.initial, { opacity: 0 });
     assert.deepEqual(h.find('heroCard').props.animate, { opacity: 1, y: 0, scale: 1, rotateY: 0, rotate: 0 });
-    for (let i = 0; i < 4; i++)
+    for (let i = 0; i < workCount; i++)
         h.tick(1400);
     assert.equal(h.phase(), 'collection');
     assert.ok(h.details().every(n => !n.props.disabled));
@@ -173,7 +173,7 @@ test('live reduced motion resets transforms on the currently revealed card', t =
 test('live reduced motion immediately releases a collection whose CSS animations are canceled', t => {
     const h = harness(t, { realReducedHook: true });
     reveal(h);
-    for (let i = 0; i < 4; i++)
+    for (let i = 0; i < workCount; i++)
         h.tick(2000);
     assert.ok(h.details().every(n => n.props.disabled));
     h.setReduced(true);
@@ -294,7 +294,7 @@ test('initial reduced motion skips charging, burst and collection celebration', 
     h.tick(800);
     h.enter();
     assert.equal(h.phase(), 'reveal');
-    for (let i = 0; i < 4; i++)
+    for (let i = 0; i < workCount; i++)
         h.tick(1400);
     assert.equal(h.phase(), 'collection');
     assert.ok(h.details().every(n => !n.props.disabled));
@@ -311,7 +311,7 @@ for (const phase of ['intro', 'sealed', 'charging', 'burst', 'reveal', 'collecti
         if (['reveal', 'collection', 'detail'].includes(phase))
             h.finishBurst();
         if (['collection', 'detail'].includes(phase)) {
-            for (let i = 0; i < 4; i++)
+            for (let i = 0; i < workCount; i++)
                 h.tick(2000);
         }
         if (phase === 'detail') {
@@ -327,7 +327,7 @@ for (const phase of ['intro', 'sealed', 'charging', 'burst', 'reveal', 'collecti
         assert.equal(h.calls.length, completed);
     });
 }
-test('replay clears pause state and owns a fresh complete four-card sequence', t => {
+test('replay clears pause state and owns a fresh complete card sequence', t => {
     const h = harness(t);
     reveal(h);
     h.key('p');
@@ -337,11 +337,11 @@ test('replay clears pause state and owns a fresh complete four-card sequence', t
     assert.equal(h.phase(), 'intro');
     reveal(h);
     const titles = [];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < workCount; i++) {
         titles.push(h.title());
         h.tick(2000);
     }
-    assert.equal(new Set(titles).size, 4);
+    assert.equal(new Set(titles).size, workCount);
     assert.equal(h.phase(), 'collection');
 });
 function worksAudioHarness() {
