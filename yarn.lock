@@ -2089,12 +2089,12 @@ foreground-child@^3.1.0:
     signal-exit "^4.0.1"
 
 framer-motion@^14:
-  version "14.2.0"
-  resolved "https://npm.flatt.tech/framer-motion/-/framer-motion-14.2.0.tgz#914ed5a13c74a962c2efaba3b8c9f4dbf6e1d1c7"
-  integrity sha512-cD2gfFujHt4r/+dZpcn5yziu7VRwQAQDakwIm/bICYXbafnpHCYokV+PnEXqErnSdv6Eh28a+SRF+f3ndGcMsQ==
+  version "14.6.0"
+  resolved "https://npm.flatt.tech/framer-motion/-/framer-motion-14.6.0.tgz#3ffd42a8eb04a6b91f2c0e9a5b3184f8d413973b"
+  integrity sha512-MzBgZxGgoHPfSLEXmo4o5XlZvb+nVRFdHtGjVhm6LMIEJKTt/8hNO023euL5mYyzc8llV/hQTfjnN68tNRHalw==
   dependencies:
-    motion-dom "14.2.0"
-    motion-utils "14.1.1"
+    motion-dom "14.6.0"
+    motion-utils "14.6.0"
     tslib "^2.4.0"
 
 fs.realpath@^1.0.0:
@@ -2976,17 +2976,17 @@ mkdirp@^1.0.4:
   resolved "https://npm.flatt.tech/mkdirp/-/mkdirp-1.0.4.tgz#3eb5ed62622756d79a5f0e2a221dfebad75c2f7e"
   integrity sha512-vVqVZQyf3WLx2Shd0qJ9xuvqgAyKPLAiqITEtqW0oIUjzo3PePDd6fW9iFz30ef7Ysp/oiWqbhszeGWW2T6Gzw==
 
-motion-dom@14.2.0:
-  version "14.2.0"
-  resolved "https://npm.flatt.tech/motion-dom/-/motion-dom-14.2.0.tgz#d9c02f0c1347a46b62b822bdf0de0e0c2fb2c275"
-  integrity sha512-TDdxnjAavh2Qm4lQCQI3uoTx9IR/Id2PI8JNEXW3AcwwV2yvhoimAX3/TnE+x82gDHfPq2yx/cJ58TTw5mMr0A==
+motion-dom@14.6.0:
+  version "14.6.0"
+  resolved "https://npm.flatt.tech/motion-dom/-/motion-dom-14.6.0.tgz#fb868ccefecfae210ba0dc026edcaf6ff8c4ef5b"
+  integrity sha512-lIojTl9aYSPIkeOOSzBliy1nNvpdO3JtVzW2WgTXQlOP4ZMuJhtWO3fP7OD4TVFwlRucdvxlDSMkL+fEQnQ52A==
   dependencies:
-    motion-utils "14.1.1"
+    motion-utils "14.6.0"
 
-motion-utils@14.1.1:
-  version "14.1.1"
-  resolved "https://npm.flatt.tech/motion-utils/-/motion-utils-14.1.1.tgz#aa34a30a91da308178b60e98fbf3d06590773470"
-  integrity sha512-3VvN5Uvf8B6qG+OfOui6Nht5EWp+vLuU3IqcAj7ItZGKqtmTjCebl5sGZF7/08gEHRnEl1AP/fIwbcEyVrcQGQ==
+motion-utils@14.6.0:
+  version "14.6.0"
+  resolved "https://npm.flatt.tech/motion-utils/-/motion-utils-14.6.0.tgz#aacdeb648c336c5d0e697131c80a97a0fb54fbee"
+  integrity sha512-bZJo2AmQ2aOFkaato6VXrTbkPG0XhMzivWUWSaI59pxyllj8QMQUFZ84MYRQnPkK+7dr4KldyJwF2+RM0sdq/w==
 
 ms@^2.1.1, ms@^2.1.3:
   version "2.1.3"
