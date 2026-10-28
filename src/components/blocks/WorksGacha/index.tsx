@@ -41,6 +41,7 @@ const Component = ({ className }: Props): JSX.Element => {
   const { isMuted, disable } = useDopamineMode();
   const reduceMotion = useReducedMotionPreference();
   const [phase, setPhase] = useState<Phase>("intro");
+  const [keyboardFocus, setKeyboardFocus] = useState(false);
   const phaseRef = useRef<Phase>("intro");
   const dialog = useRef<HTMLDialogElement>(null);
   const normalButton = useRef<HTMLButtonElement>(null);
@@ -284,6 +285,11 @@ const Component = ({ className }: Props): JSX.Element => {
       className={className}
       aria-label="作品カードパック"
       data-phase={phase}
+      data-keyboard-focus={keyboardFocus}
+      onKeyDownCapture={(event) => {
+        if (event.key === "Tab" || event.key.startsWith("Arrow")) setKeyboardFocus(true);
+      }}
+      onPointerDownCapture={() => setKeyboardFocus(false)}
     >
         <dialog
           ref={dialog}
@@ -574,7 +580,14 @@ const StyledComponent = styled(Component)`
   }
   button:focus-visible,
   a:focus-visible,
-  h4:focus-visible {
+  h4:focus-visible,
+  .pack:focus-visible {
+    outline: none;
+  }
+  /* Automatic modal/scene focus must not draw a ring for touch or mouse users. */
+  &[data-keyboard-focus="true"] button:focus-visible,
+  &[data-keyboard-focus="true"] a:focus-visible,
+  &[data-keyboard-focus="true"] h4:focus-visible {
     outline: 3px solid #fc69dc;
     outline-offset: 5px;
   }
@@ -644,7 +657,7 @@ const StyledComponent = styled(Component)`
     font-size: 12px;
     white-space: nowrap;
   }
-  .pack:focus-visible {
+  &[data-keyboard-focus="true"] .pack:focus-visible {
     outline: 3px solid #fc69dc;
     outline-offset: 8px;
   }

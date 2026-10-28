@@ -75,6 +75,18 @@ function harness(t, { reduced = false, realReducedHook = false } = {}) {
     };
 }
 function reveal(h) { h.tick(2200); h.enter(); h.tick(360); h.finishBurst(); assert.equal(h.phase(), 'reveal'); }
+test('automatic scene focus stays unmarked until keyboard navigation, and pointer input clears the mark', t => {
+    const h = harness(t);
+    const section = () => h.renderer.root.findByType('section');
+    assert.equal(section().props['data-keyboard-focus'], false);
+    h.tick(2200);
+    assert.equal(h.phase(), 'sealed');
+    assert.equal(section().props['data-keyboard-focus'], false);
+    act(() => section().props.onKeyDownCapture({ key: 'Tab' }));
+    assert.equal(section().props['data-keyboard-focus'], true);
+    act(() => section().props.onPointerDownCapture());
+    assert.equal(section().props['data-keyboard-focus'], false);
+});
 test('automatic cards retain a stable focus target without stealing user focus', t => {
     const h = harness(t);
     reveal(h);
