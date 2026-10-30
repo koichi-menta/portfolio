@@ -578,16 +578,16 @@ const StyledComponent = styled(Component)`
     font: inherit;
     cursor: pointer;
   }
-  button:focus-visible,
-  a:focus-visible,
-  h4:focus-visible,
-  .pack:focus-visible {
+  button:focus,
+  a:focus,
+  [tabindex]:focus,
+  .stage:focus {
     outline: none;
   }
   /* Automatic modal/scene focus must not draw a ring for touch or mouse users. */
   &[data-keyboard-focus="true"] button:focus-visible,
   &[data-keyboard-focus="true"] a:focus-visible,
-  &[data-keyboard-focus="true"] h4:focus-visible {
+  &[data-keyboard-focus="true"] [tabindex]:focus-visible {
     outline: 3px solid #fc69dc;
     outline-offset: 5px;
   }
