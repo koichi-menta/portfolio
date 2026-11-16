@@ -20,7 +20,7 @@
   "dependencies": {
     "clsx": "^2.1.1",
     "framer-motion": "^14",
-    "next": "^15",
+    "next": "^16",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-icons": "^5.7.0",
